@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:C:/dev/jisa/prisma/dev.db"
+}
+
+model Branch {
+  id          Int                       @id @default(autoincrement())
+  branchCode  String                    @unique @map("branch_code")
+  name        String
+  region      String
+  status      String                    @default("active")
+  managerName String                    @map("manager_name")
+  phone       String
+  memo        String?
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  updatedAt   DateTime                  @updatedAt @map("updated_at")
+  permissions BranchProgramPermission[]
+  sales       Sale[]
+
+  @@map("branches")
+}
+
+model Program {
+  id          Int                       @id @default(autoincrement())
+  name        String
+  permissions BranchProgramPermission[]
+  sales       Sale[]
+
+  @@map("programs")
+}
+
+model BranchProgramPermission {
+  id        Int     @id @default(autoincrement())
+  branchId  Int     @map("branch_id")
+  programId Int     @map("program_id")
+  isEnabled Boolean @default(false) @map("is_enabled")
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  program   Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, programId])
+  @@map("branch_program_permissions")
+}
+
+model Sale {
+  id        Int     @id @default(autoincrement())
+  branchId  Int     @map("branch_id")
+  yearMonth String  @map("year_month")
+  programId Int     @map("program_id")
+  quantity  Int     @default(0)
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  program   Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, yearMonth, programId])
+  @@index([yearMonth])
+  @@map("sales")
+}

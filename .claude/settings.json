@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run start)",
+      "Bash(npm run db:push)",
+      "Bash(npm run db:seed)",
+      "Bash(npm run lint)",
+      "Bash(npx prisma studio)",
+      "Bash(npx eslint *)"
+    ]
+  }
+}
