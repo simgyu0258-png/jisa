@@ -9,6 +9,7 @@
     "start:local": "next start -H 127.0.0.1 -p 3000",
     "serve:stable": "npm run build && npm run start:local",
     "lint": "eslint",
+    "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js"
   },
@@ -28,6 +29,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
