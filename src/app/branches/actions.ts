@@ -11,10 +11,10 @@ async function generateBranchCode() {
   });
 
   const nextNumber = lastBranch
-    ? Number.parseInt(lastBranch.branchCode.replace("BR", ""), 10) + 1
+    ? Number.parseInt(lastBranch.branchCode.replace(/^[A-Z]+/, ""), 10) + 1
     : 1;
 
-  return `BR${String(nextNumber).padStart(3, "0")}`;
+  return `JS${String(nextNumber).padStart(3, "0")}`;
 }
 
 export async function createBranchAction(formData: FormData) {
@@ -23,6 +23,7 @@ export async function createBranchAction(formData: FormData) {
   const status = String(formData.get("status") || "active");
   const managerName = String(formData.get("managerName") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
+  const address = String(formData.get("address") || "").trim();
   const memo = String(formData.get("memo") || "").trim();
 
   if (!name || !region || !managerName || !phone) {
@@ -40,6 +41,7 @@ export async function createBranchAction(formData: FormData) {
       status: status === "inactive" ? "inactive" : "active",
       managerName,
       phone,
+      address: address || null,
       memo: memo || null,
       permissions: {
         create: programs.map((program) => ({

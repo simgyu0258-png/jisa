@@ -7,8 +7,9 @@ import { clsx } from "clsx";
 const menus = [
   { href: "/", label: "대시보드" },
   { href: "/branches", label: "지사 관리" },
-  { href: "/permissions", label: "판매권한 관리" },
-  { href: "/sales", label: "판매부수 관리" },
+  { href: "/permissions", label: "판매권한 조회" },
+  { href: "/sales", label: "판매부수 조회 및 관리" },
+  { href: "/programs", label: "프로그램 관리" },
 ];
 
 export function MainNav() {
@@ -16,7 +17,7 @@ export function MainNav() {
 
   return (
     <aside className="w-full border-b border-slate-200 bg-white lg:w-64 lg:border-b-0 lg:border-r">
-      <div className="px-6 py-5 text-lg font-bold text-slate-900">본사 관리 시스템</div>
+      <div className="px-6 py-5 text-lg font-bold text-slate-900">지사 관리 시스템</div>
       <nav className="flex gap-2 px-4 pb-4 lg:flex-col">
         {menus.map((menu) => {
           const active =

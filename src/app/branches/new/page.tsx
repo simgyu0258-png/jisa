@@ -24,36 +24,49 @@ export default async function NewBranchPage({
       )}
 
       <form action={createBranchAction} className="space-y-3 rounded-lg border border-slate-200 bg-white p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="space-y-1 text-sm">
-            <span>지사명 *</span>
-            <input name="name" required />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span>지역 *</span>
-            <input name="region" required />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span>상태</span>
-            <select defaultValue="active" name="status">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="w-3 shrink-0 text-center font-medium text-rose-500">*</span>
+            <span className="w-20 shrink-0 text-sm font-medium text-slate-600">지사명</span>
+            <input className="min-w-0 flex-1" name="name" required />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 shrink-0 text-center font-medium text-rose-500">*</span>
+            <span className="w-20 shrink-0 text-sm font-medium text-slate-600">지역</span>
+            <input className="min-w-0 flex-1" name="region" required />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 shrink-0 text-center font-medium text-rose-500">*</span>
+            <span className="w-20 shrink-0 text-sm font-medium text-slate-600">상태</span>
+            <select className="min-w-0 flex-1" defaultValue="active" name="status">
               <option value="active">active</option>
               <option value="inactive">inactive</option>
             </select>
-          </label>
-          <label className="space-y-1 text-sm">
-            <span>담당자 *</span>
-            <input name="managerName" required />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span>연락처 *</span>
-            <input name="phone" required />
-          </label>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 shrink-0 text-center font-medium text-rose-500">*</span>
+            <span className="w-20 shrink-0 text-sm font-medium text-slate-600">담당자</span>
+            <input className="min-w-0 flex-1" name="managerName" required />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 shrink-0 text-center font-medium text-rose-500">*</span>
+            <span className="w-20 shrink-0 text-sm font-medium text-slate-600">연락처</span>
+            <input className="min-w-0 flex-1" name="phone" required />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 shrink-0"></span>
+            <span className="w-20 shrink-0 text-sm font-medium text-slate-600">주소</span>
+            <input className="min-w-0 flex-1" name="address" />
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="w-3 shrink-0 pt-2"></span>
+            <span className="w-20 shrink-0 pt-2 text-sm font-medium text-slate-600">메모</span>
+            <textarea className="min-w-0 flex-1" name="memo" rows={4} />
+          </div>
         </div>
-        <label className="space-y-1 text-sm">
-          <span>메모</span>
-          <textarea name="memo" rows={4} />
-        </label>
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">등록</button>
+        <div className="flex justify-center pt-[100px]">
+          <button className="rounded-md bg-slate-900 px-6 py-2 text-sm text-white">등록</button>
+        </div>
       </form>
     </div>
   );

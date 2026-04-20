@@ -15,6 +15,7 @@ model Branch {
   status      String                    @default("active")
   managerName String                    @map("manager_name")
   phone       String
+  address     String?
   memo        String?
   createdAt   DateTime                  @default(now()) @map("created_at")
   updatedAt   DateTime                  @updatedAt @map("updated_at")

@@ -18,6 +18,7 @@ export async function updateBranchInfoAction(branchId: number, formData: FormDat
       status: String(formData.get("status")) === "inactive" ? "inactive" : "active",
       managerName: String(formData.get("managerName") || "").trim(),
       phone: String(formData.get("phone") || "").trim(),
+      address: String(formData.get("address") || "").trim() || null,
       memo: String(formData.get("memo") || "").trim() || null,
     },
   });
@@ -96,20 +97,19 @@ export async function saveSalesAction(branchId: number, formData: FormData) {
   const yearMonth = String(formData.get("yearMonth"));
   const programIds = formData.getAll("programId");
 
-  await prisma.$transaction(async (tx) => {
-    await tx.sale.deleteMany({ where: { branchId, yearMonth } });
+  const programIdInts = programIds.map((id) => Number.parseInt(String(id), 10));
 
-    const createData = programIds.map((programIdRaw) => {
-      const programId = Number.parseInt(String(programIdRaw), 10);
-      return {
+  await prisma.$transaction(async (tx) => {
+    await tx.sale.deleteMany({ where: { branchId, yearMonth, programId: { in: programIdInts } } });
+
+    await tx.sale.createMany({
+      data: programIdInts.map((programId) => ({
         branchId,
         yearMonth,
         programId,
         quantity: Math.max(0, toInt(formData.get(`quantity_${programId}`))),
-      };
+      })),
     });
-
-    await tx.sale.createMany({ data: createData });
   });
 
   revalidatePath("/");

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 
@@ -10,7 +10,7 @@ type PreviewResponse = {
     errorRows: number;
   };
   errors: Array<{ row: number; message: string }>;
-  payload: Array<{ branchId: number; yearMonth: string; quantities: number[] }>;
+  payload: Array<{ branchId: number; yearMonth: string; programQuantities: Record<number, number> }>;
 };
 
 export function SalesUploadClient() {
@@ -60,6 +60,19 @@ export function SalesUploadClient() {
   return (
     <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
       <h2 className="text-lg font-semibold">엑셀 업로드 (판매부수 일괄 수정)</h2>
+      <p className="text-sm text-slate-500">
+        양식을 다운로드한 뒤 판매부수를 입력하고 업로드하세요.
+        <a
+          className="ml-2 text-slate-700 underline hover:text-slate-900"
+          download
+          href="/api/sales/excel/template"
+        >
+          양식 다운로드
+        </a>
+      </p>
+      <p className="text-xs text-slate-400">
+        필수 컬럼: 지사코드, 연월(예: 2025-01) · 이후 컬럼: 프로그램별 판매부수
+      </p>
       <form
         action={(formData) => {
           requestPreview(formData);

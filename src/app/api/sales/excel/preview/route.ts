@@ -20,41 +20,49 @@ export async function POST(request: Request) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 
-  const branches = await prisma.branch.findMany({
-    include: { sales: true },
-  });
-  const branchMap = new Map(branches.map((branch) => [branch.branchCode, branch]));
+  const [branches, programs] = await Promise.all([
+    prisma.branch.findMany({ include: { sales: true } }),
+    prisma.program.findMany({ orderBy: { id: "asc" } }),
+  ]);
+
+  const branchMap = new Map(branches.map((branch) => [branch.name, branch]));
 
   const errors: Array<{ row: number; message: string }> = [];
-  const payload: Array<{ branchId: number; yearMonth: string; quantities: number[] }> = [];
+  const payload: Array<{ branchId: number; yearMonth: string; programQuantities: Record<number, number> }> = [];
   let updatedRows = 0;
   let unchangedRows = 0;
 
   rows.forEach((row, index) => {
     const excelRow = index + 2;
-    const branchCode = String(row.branch_code ?? "").trim();
-    const yearMonth = String(row.year_month ?? "").trim();
-    const branch = branchMap.get(branchCode);
+    const branchName = String(row["지사명"] ?? "").trim();
+    const yearMonth = String(row["연월"] ?? "").trim();
+    const branch = branchMap.get(branchName);
 
     if (!branch) {
-      errors.push({ row: excelRow, message: `지사코드(${branchCode})를 찾을 수 없습니다.` });
+      errors.push({ row: excelRow, message: `지사명(${branchName})을 찾을 수 없습니다.` });
       return;
     }
     if (!isValidYearMonth(yearMonth)) {
-      errors.push({ row: excelRow, message: `year_month(${yearMonth}) 형식이 올바르지 않습니다.` });
+      errors.push({ row: excelRow, message: `연월(${yearMonth}) 형식이 올바르지 않습니다. (예: 2025-01)` });
       return;
     }
 
-    const quantities = Array.from({ length: 8 }, (_, i) => toNonNegativeInt(row[`program${i + 1}`]));
-    const current = Array.from({ length: 8 }, (_, i) => {
-      const sale = branch.sales.find((item) => item.yearMonth === yearMonth && item.programId === i + 1);
-      return sale?.quantity ?? 0;
-    });
-    const changed = quantities.some((value, i) => value !== current[i]);
+    const programQuantities: Record<number, number> = {};
+    let changed = false;
+
+    for (const program of programs) {
+      const quantity = toNonNegativeInt(row[program.name]);
+      programQuantities[program.id] = quantity;
+      const current = branch.sales.find(
+        (s) => s.yearMonth === yearMonth && s.programId === program.id,
+      )?.quantity ?? 0;
+      if (quantity !== current) changed = true;
+    }
+
     if (changed) updatedRows += 1;
     else unchangedRows += 1;
 
-    payload.push({ branchId: branch.id, yearMonth, quantities });
+    payload.push({ branchId: branch.id, yearMonth, programQuantities });
   });
 
   return NextResponse.json({

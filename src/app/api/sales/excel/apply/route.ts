@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-type Payload = Array<{ branchId: number; yearMonth: string; quantities: number[] }>;
+type Payload = Array<{ branchId: number; yearMonth: string; programQuantities: Record<number, number> }>;
 
 export async function POST(request: Request) {
   const body = (await request.json()) as { payload?: Payload };
@@ -14,13 +14,14 @@ export async function POST(request: Request) {
 
   await prisma.$transaction(async (tx) => {
     for (const item of payload) {
+      const programIds = Object.keys(item.programQuantities).map(Number);
       await tx.sale.deleteMany({ where: { branchId: item.branchId, yearMonth: item.yearMonth } });
       await tx.sale.createMany({
-        data: Array.from({ length: 8 }, (_, i) => ({
+        data: programIds.map((programId) => ({
           branchId: item.branchId,
           yearMonth: item.yearMonth,
-          programId: i + 1,
-          quantity: Math.max(0, Number(item.quantities[i] ?? 0)),
+          programId,
+          quantity: Math.max(0, Number(item.programQuantities[programId] ?? 0)),
         })),
       });
     }

@@ -1,4 +1,4 @@
-import { format, subMonths } from "date-fns";
+import { format, subMonths, subYears } from "date-fns";
 
 export function getCurrentYearMonth() {
   return format(new Date(), "yyyy-MM");
@@ -7,6 +7,11 @@ export function getCurrentYearMonth() {
 export function getPreviousYearMonth(yearMonth: string) {
   const date = new Date(`${yearMonth}-01T00:00:00`);
   return format(subMonths(date, 1), "yyyy-MM");
+}
+
+export function getSameMonthLastYear(yearMonth: string) {
+  const date = new Date(`${yearMonth}-01T00:00:00`);
+  return format(subYears(date, 1), "yyyy-MM");
 }
 
 export function getRecentMonths(count = 12) {

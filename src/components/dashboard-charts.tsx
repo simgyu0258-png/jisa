@@ -22,13 +22,17 @@ export function DashboardCharts({
   programBars: ProgramBar[];
   monthlyLine: MonthlyLine[];
 }) {
+  const maxQuantity = Math.max(...monthlyLine.map((d) => d.quantity), 0);
+  const maxTick = Math.ceil(maxQuantity / 500) * 500 || 500;
+  const yTicks = Array.from({ length: maxTick / 500 + 1 }, (_, i) => i * 500);
+
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4">
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-800">프로그램별 판매 부수</h3>
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={programBars}>
+        <div className="w-full">
+          <ResponsiveContainer width="100%" height={288}>
+            <BarChart data={programBars} barCategoryGap="33%">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
@@ -41,12 +45,12 @@ export function DashboardCharts({
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-800">월별 판매 부수 추이</h3>
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full">
+          <ResponsiveContainer width="100%" height={288}>
             <LineChart data={monthlyLine}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="yearMonth" />
-              <YAxis />
+              <YAxis domain={[0, maxTick]} ticks={yTicks} />
               <Tooltip />
               <Line
                 dataKey="quantity"
