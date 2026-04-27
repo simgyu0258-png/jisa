@@ -1,4 +1,6 @@
-﻿import { DashboardCharts } from "@/components/dashboard-charts";
+﻿export const dynamic = "force-dynamic";
+
+import { DashboardCharts } from "@/components/dashboard-charts";
 import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
 
