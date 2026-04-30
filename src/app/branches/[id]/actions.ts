@@ -2,14 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { getPreviousYearMonth } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
+
+async function requireMaster() {
+  const session = await auth();
+  if (!session || session.user.role !== "master") redirect("/");
+}
 
 function toInt(value: FormDataEntryValue | null) {
   return Number.parseInt(String(value ?? "0"), 10) || 0;
 }
 
 export async function updateBranchInfoAction(branchId: number, formData: FormData) {
+  await requireMaster();
   await prisma.branch.update({
     where: { id: branchId },
     data: {
@@ -29,6 +36,7 @@ export async function updateBranchInfoAction(branchId: number, formData: FormDat
 }
 
 export async function updatePermissionsAction(branchId: number, formData: FormData) {
+  await requireMaster();
   const mode = String(formData.get("mode") || "");
   const selectedIds = new Set(
     formData
@@ -94,6 +102,7 @@ export async function updatePermissionsAction(branchId: number, formData: FormDa
 }
 
 export async function saveSalesAction(branchId: number, formData: FormData) {
+  await requireMaster();
   const yearMonth = String(formData.get("yearMonth"));
   const programIds = formData.getAll("programId");
 
@@ -119,6 +128,7 @@ export async function saveSalesAction(branchId: number, formData: FormData) {
 }
 
 export async function copyPreviousMonthAction(branchId: number, formData: FormData) {
+  await requireMaster();
   const yearMonth = String(formData.get("yearMonth"));
   const prevYearMonth = getPreviousYearMonth(yearMonth);
 
@@ -147,6 +157,7 @@ export async function copyPreviousMonthAction(branchId: number, formData: FormDa
 }
 
 export async function resetSalesAction(branchId: number, formData: FormData) {
+  await requireMaster();
   const yearMonth = String(formData.get("yearMonth"));
   await prisma.sale.deleteMany({ where: { branchId, yearMonth } });
   revalidatePath("/");

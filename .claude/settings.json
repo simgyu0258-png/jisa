@@ -8,7 +8,12 @@
       "Bash(npm run db:seed)",
       "Bash(npm run lint)",
       "Bash(npx prisma studio)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.wyizjtilgtknlysoyewm:visang123!!@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres\" npx prisma db push)",
+      "Bash(node -e ' *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
