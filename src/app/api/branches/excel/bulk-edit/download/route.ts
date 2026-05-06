@@ -13,12 +13,12 @@ export async function GET() {
 
   const rows = branches.map((branch) => {
     const permMap = new Map(branch.permissions.map((p) => [p.programId, p.isEnabled]));
-    const permCols = Object.fromEntries(programs.map((p) => [p.name, permMap.get(p.id) ? 1 : 0]));
+    const permCols = Object.fromEntries(programs.map((p) => [p.name, permMap.get(p.id) ? "O" : "X"]));
     return {
       지사코드: branch.branchCode,
       지사명: branch.name,
       지역: branch.region,
-      상태: branch.status,
+      상태: branch.status === "active" ? "활성" : "비활성",
       담당자: branch.managerName,
       연락처: branch.phone,
       주소: branch.address ?? "",

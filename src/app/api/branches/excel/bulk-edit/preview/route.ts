@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const region = String(row["지역"] ?? "").trim();
     const managerName = String(row["담당자"] ?? "").trim();
     const phone = String(row["연락처"] ?? "").trim();
-    const statusRaw = String(row["상태"] ?? "active").trim();
+    const statusRaw = String(row["상태"] ?? "활성").trim();
     const address = String(row["주소"] ?? "").trim() || null;
     const memo = String(row["메모"] ?? "").trim() || null;
 
