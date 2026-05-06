@@ -61,13 +61,13 @@ export function BranchBulkUploadClient() {
         <div className="p-5 space-y-3">
           <p className="text-sm text-slate-500">
             아래 양식을 다운로드한 뒤 내용을 입력하고 업로드하세요.
-            <a
+            <button
               className="ml-2 text-slate-700 underline hover:text-slate-900"
-              download
-              href="/api/branches/excel/template"
+              type="button"
+              onClick={() => { window.location.href = `/api/branches/excel/template?t=${Date.now()}`; }}
             >
               양식 다운로드
-            </a>
+            </button>
           </p>
           <p className="text-xs text-slate-400">
             지사명이 있는 행이 새 지사 시작 · 지사명 없이 기관명만 입력하면 바로 위 지사의 기관으로 등록 ·
