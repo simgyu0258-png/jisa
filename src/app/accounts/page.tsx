@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { createAccountAction, deleteAccountAction, resetPasswordAction, updateRoleAction } from "./actions";
+import { createAccountAction, deleteAccountAction, resetPasswordAction } from "./actions";
+import { RoleChangeForm } from "./role-change-form";
 
 export default async function AccountsPage() {
   const session = await auth();
@@ -78,13 +79,7 @@ export default async function AccountsPage() {
                         마스터 (나)
                       </span>
                     ) : (
-                      <form action={updateRoleAction.bind(null, user.id)} className="flex items-center gap-2">
-                        <select className="text-sm" defaultValue={user.role} name="role">
-                          <option value="master">마스터</option>
-                          <option value="user">일반</option>
-                        </select>
-                        <button className="rounded-md bg-slate-100 px-3 py-1.5 text-xs text-slate-700">변경</button>
-                      </form>
+                      <RoleChangeForm currentRole={user.role} userId={user.id} />
                     )}
                   </td>
                   <td className="px-4 py-2.5">

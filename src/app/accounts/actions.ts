@@ -40,12 +40,11 @@ export async function deleteAccountAction(userId: number) {
 export async function updateRoleAction(userId: number, formData: FormData) {
   await requireMaster();
   const session = await auth();
-  if (String(userId) === session!.user.id) redirect("/accounts?error=self");
+  if (String(userId) === session!.user.id) return;
 
   const role = String(formData.get("role") || "user");
   await prisma.user.update({ where: { id: userId }, data: { role } });
   revalidatePath("/accounts");
-  redirect("/accounts");
 }
 
 export async function resetPasswordAction(userId: number, formData: FormData) {
