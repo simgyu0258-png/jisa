@@ -1,6 +1,8 @@
+import { auth } from "@/auth";
 import { getCurrentYearMonth } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
 import { SalesFilterClient } from "./filter-client";
+import { SalesTableClient } from "./sales-table-client";
 import { SalesUploadClient } from "./upload-client";
 
 type Params = { yearMonth?: string | string[]; q?: string; region?: string; status?: string };
@@ -10,7 +12,7 @@ export default async function SalesPage({
 }: {
   searchParams: Promise<Params>;
 }) {
-  const params = await searchParams;
+  const [params, session] = await Promise.all([searchParams, auth()]);
 
   const rawYearMonth = params.yearMonth;
   const yearMonths: string[] =
@@ -34,6 +36,7 @@ export default async function SalesPage({
       },
       include: {
         sales: { where: { yearMonth: { in: yearMonths } }, orderBy: { programId: "asc" } },
+        permissions: { select: { programId: true, isEnabled: true } },
       },
       orderBy: { name: "asc" },
     }),
@@ -42,17 +45,13 @@ export default async function SalesPage({
   branches.sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   const downloadQuery = yearMonths.map((ym) => `yearMonth=${ym}`).join("&");
+  const canEdit = session?.user.role === "master";
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">판매부수 조회 및 관리</h1>
 
-      <SalesFilterClient
-        q={q}
-        region={region}
-        selectedMonths={yearMonths}
-        status={status}
-      />
+      <SalesFilterClient q={q} region={region} selectedMonths={yearMonths} status={status} />
 
       <div className="flex items-center gap-2">
         <a
@@ -70,49 +69,12 @@ export default async function SalesPage({
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="px-3 py-2 text-left">지사</th>
-              {programs.map((program) => (
-                <th className="px-3 py-2 text-right" key={program.id}>
-                  {program.name}
-                </th>
-              ))}
-              <th className="px-3 py-2 text-right">합계</th>
-            </tr>
-          </thead>
-          <tbody>
-            {branches.map((branch) => {
-              const map = new Map<number, number>();
-              for (const sale of branch.sales) {
-                map.set(sale.programId, (map.get(sale.programId) ?? 0) + sale.quantity);
-              }
-              const total = programs.reduce((sum, p) => sum + (map.get(p.id) ?? 0), 0);
-
-              return (
-                <tr className="border-t border-slate-200" key={branch.id}>
-                  <td className="px-3 py-2">{branch.name}</td>
-                  {programs.map((program) => (
-                    <td className="px-3 py-2 text-right" key={program.id}>
-                      {(map.get(program.id) ?? 0).toLocaleString()}
-                    </td>
-                  ))}
-                  <td className="px-3 py-2 text-right font-semibold">{total.toLocaleString()}</td>
-                </tr>
-              );
-            })}
-            {branches.length === 0 && (
-              <tr>
-                <td className="px-3 py-8 text-center text-slate-500" colSpan={programs.length + 2}>
-                  데이터가 없습니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <SalesTableClient
+        branches={branches}
+        canEdit={canEdit}
+        programs={programs}
+        selectedMonths={yearMonths}
+      />
 
       <SalesUploadClient />
     </div>
