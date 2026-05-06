@@ -15,7 +15,7 @@ export default async function HomePage() {
   const sameMonthLastYear = getSameMonthLastYear(currentMonth);
   const recentMonths = getRecentMonths(12);
 
-  const [programs, currentByProgram, currentTotal, previousTotal, lastYearTotal, allRecent] =
+  const [programs, currentByProgram, currentTotal, previousTotal, lastYearTotal, allRecent, byIssue] =
     await Promise.all([
       prisma.program.findMany({ orderBy: { id: "asc" } }),
       prisma.saleOrder.groupBy({
@@ -39,6 +39,11 @@ export default async function HomePage() {
         where: { orderDate: { gte: `${recentMonths[0]}-01` } },
         select: { orderDate: true, quantity: true },
       }),
+      prisma.saleOrder.groupBy({
+        by: ["issueNumber"],
+        _sum: { quantity: true },
+        orderBy: { issueNumber: "asc" },
+      }),
     ]);
 
   const totalCurrent = currentTotal._sum.quantity ?? 0;
@@ -50,6 +55,11 @@ export default async function HomePage() {
   const programBars = programs.map((p) => ({
     name: p.name,
     quantity: currentByProgram.find((x) => x.programId === p.id)?._sum.quantity ?? 0,
+  }));
+
+  const issueBars = byIssue.map((x) => ({
+    issue: `${x.issueNumber}호`,
+    quantity: x._sum.quantity ?? 0,
   }));
 
   // 월별 집계: orderDate에서 YYYY-MM 추출
@@ -85,7 +95,7 @@ export default async function HomePage() {
           </div>
         </article>
       </section>
-      <DashboardCharts monthlyLine={monthlyLine} programBars={programBars} />
+      <DashboardCharts monthlyLine={monthlyLine} programBars={programBars} issueBars={issueBars} />
     </div>
   );
 }
