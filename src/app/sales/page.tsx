@@ -45,7 +45,7 @@ export default async function SalesPage({
   branches.sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   const downloadQuery = yearMonths.map((ym) => `yearMonth=${ym}`).join("&");
-  const canEdit = session?.user.role === "master";
+  const canEdit = !!session;
 
   return (
     <div className="space-y-4">

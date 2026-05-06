@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-async function requireMaster() {
+async function requireAuth() {
   const session = await auth();
-  if (!session || session.user.role !== "master") redirect("/");
+  if (!session) redirect("/login");
 }
 
 export async function saveSalesFromPageAction(
@@ -15,7 +15,7 @@ export async function saveSalesFromPageAction(
   yearMonth: string,
   quantities: Record<number, number>,
 ) {
-  await requireMaster();
+  await requireAuth();
 
   const programIds = Object.keys(quantities).map(Number);
   if (!yearMonth || programIds.length === 0) return;

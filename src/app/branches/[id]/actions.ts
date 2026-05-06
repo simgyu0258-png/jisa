@@ -11,6 +11,11 @@ async function requireMaster() {
   if (!session || session.user.role !== "master") redirect("/");
 }
 
+async function requireAuth() {
+  const session = await auth();
+  if (!session) redirect("/login");
+}
+
 function toInt(value: FormDataEntryValue | null) {
   return Number.parseInt(String(value ?? "0"), 10) || 0;
 }
@@ -102,7 +107,7 @@ export async function updatePermissionsAction(branchId: number, formData: FormDa
 }
 
 export async function saveSalesAction(branchId: number, formData: FormData) {
-  await requireMaster();
+  await requireAuth();
   const yearMonth = String(formData.get("yearMonth"));
   const programIds = formData.getAll("programId");
 
@@ -128,7 +133,7 @@ export async function saveSalesAction(branchId: number, formData: FormData) {
 }
 
 export async function copyPreviousMonthAction(branchId: number, formData: FormData) {
-  await requireMaster();
+  await requireAuth();
   const yearMonth = String(formData.get("yearMonth"));
   const prevYearMonth = getPreviousYearMonth(yearMonth);
 
@@ -157,7 +162,7 @@ export async function copyPreviousMonthAction(branchId: number, formData: FormDa
 }
 
 export async function resetSalesAction(branchId: number, formData: FormData) {
-  await requireMaster();
+  await requireAuth();
   const yearMonth = String(formData.get("yearMonth"));
   await prisma.sale.deleteMany({ where: { branchId, yearMonth } });
   revalidatePath("/");
