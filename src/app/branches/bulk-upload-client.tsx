@@ -70,7 +70,7 @@ export function BranchBulkUploadClient() {
             </a>
           </p>
           <p className="text-xs text-slate-400">
-            필수: 지사명, 지역, 담당자, 연락처 · 선택: 상태(active/inactive), 주소, 메모 ·
+            필수: 지사명, 지역, 담당자, 연락처 · 선택: 상태(활성/비활성), 주소 ·
             판매권한: 프로그램명 컬럼에 1(권한있음) / 0(권한없음)
           </p>
           <form
@@ -139,7 +139,7 @@ export function BranchBulkUploadClient() {
                       <tr className="border-t border-slate-100" key={i}>
                         <td className="px-3 py-2">{row.name}</td>
                         <td className="px-3 py-2">{row.region}</td>
-                        <td className="px-3 py-2">{row.status}</td>
+                        <td className="px-3 py-2">{row.status === "active" ? "활성" : "비활성"}</td>
                         <td className="px-3 py-2">{row.managerName}</td>
                         <td className="px-3 py-2">{row.phone}</td>
                         <td className="px-3 py-2 text-slate-400">{row.address ?? "-"}</td>

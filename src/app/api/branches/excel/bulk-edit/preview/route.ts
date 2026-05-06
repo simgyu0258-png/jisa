@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       branchCode,
       name,
       region,
-      status: statusRaw === "inactive" ? "inactive" : "active",
+      status: (statusRaw === "inactive" || statusRaw === "비활성") ? "inactive" : "active",
       managerName,
       phone,
       address,

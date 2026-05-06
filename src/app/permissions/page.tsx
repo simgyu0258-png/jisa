@@ -42,8 +42,8 @@ export default async function PermissionsPage({
         <input defaultValue={region} name="region" placeholder="지역 필터" />
         <select defaultValue={status} name="status">
           <option value="">전체 상태</option>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
+          <option value="active">활성</option>
+          <option value="inactive">비활성</option>
         </select>
         <button className="rounded-md bg-slate-100 px-3 py-2 text-sm">조회</button>
       </form>

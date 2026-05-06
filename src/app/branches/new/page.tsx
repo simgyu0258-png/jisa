@@ -39,8 +39,8 @@ export default async function NewBranchPage({
             <span className="w-3 shrink-0 text-center font-medium text-rose-500">*</span>
             <span className="w-20 shrink-0 text-sm font-medium text-slate-600">상태</span>
             <select className="min-w-0 flex-1" defaultValue="active" name="status">
-              <option value="active">active</option>
-              <option value="inactive">inactive</option>
+              <option value="active">활성</option>
+              <option value="inactive">비활성</option>
             </select>
           </div>
           <div className="flex items-center gap-3">

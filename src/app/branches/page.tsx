@@ -79,8 +79,8 @@ export default async function BranchesPage({
         <input defaultValue={region} name="region" placeholder="지역 필터" />
         <select defaultValue={status} name="status">
           <option value="">전체 상태</option>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
+          <option value="active">활성</option>
+          <option value="inactive">비활성</option>
         </select>
         <select defaultValue={sort} name="sort">
           <option value="updatedAt">최근 수정일</option>
@@ -130,7 +130,7 @@ export default async function BranchesPage({
                   </div>
                 </td>
                 <td className="px-3 py-2 text-center">{branch.monthTotal.toLocaleString()}</td>
-                <td className="px-3 py-2 text-center">{branch.status}</td>
+                <td className="px-3 py-2 text-center">{branch.status === "active" ? "활성" : "비활성"}</td>
                 <td className="px-3 py-2 text-center">{branch.updatedAt.toISOString().slice(0, 10)}</td>
               </tr>
             ))}

@@ -110,8 +110,8 @@ export function SalesFilterClient({ selectedMonths, q, region, status }: Props) 
         <input defaultValue={region} name="region" placeholder="지역 필터" />
         <select defaultValue={status} name="status">
           <option value="">전체 상태</option>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
+          <option value="active">활성</option>
+          <option value="inactive">비활성</option>
         </select>
         <button
           className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-40"
