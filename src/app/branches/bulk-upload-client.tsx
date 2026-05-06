@@ -70,7 +70,7 @@ export function BranchBulkUploadClient() {
             </a>
           </p>
           <p className="text-xs text-slate-400">
-            필수: 지사명, 지역, 담당자, 연락처 · 선택: 상태(활성/비활성), 주소 ·
+            필수: 지사명, 지역, 담당자, 연락처 · 선택: 상태(활성/비활성), 주소, 기관1~기관5 ·
             판매권한: 프로그램명 컬럼에 1(권한있음) / 0(권한없음)
           </p>
           <form
@@ -132,6 +132,7 @@ export function BranchBulkUploadClient() {
                           {preview.programNames[id]}
                         </th>
                       ))}
+                      <th className="px-3 py-2 text-left font-medium">기관</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -152,6 +153,11 @@ export function BranchBulkUploadClient() {
                             )}
                           </td>
                         ))}
+                        <td className="px-3 py-2 text-slate-600 text-xs">
+                          {row.institutions && row.institutions.length > 0
+                            ? row.institutions.join(", ")
+                            : <span className="text-slate-300">-</span>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -40,6 +40,9 @@ export async function POST(request: Request) {
               isEnabled: item.permissions?.[p.id] ?? false,
             })),
           },
+          institutions: item.institutions && item.institutions.length > 0
+            ? { create: item.institutions.map((instName) => ({ name: instName })) }
+            : undefined,
         },
       });
     }

@@ -11,6 +11,7 @@ export type BranchPreviewRow = {
   address: string | null;
   memo: string | null;
   permissions: Record<number, boolean>;
+  institutions: string[];
 };
 
 export type BranchPreviewResponse = {
@@ -78,6 +79,10 @@ export async function POST(request: Request) {
       permissions[program.id] = programByName.has(program.name) && isTruthy(row[program.name]);
     }
 
+    const institutions = [1, 2, 3, 4, 5]
+      .map((n) => String(row[`기관${n}`] ?? "").trim())
+      .filter(Boolean);
+
     seenNames.add(name);
     payload.push({
       name,
@@ -88,6 +93,7 @@ export async function POST(request: Request) {
       address,
       memo,
       permissions,
+      institutions,
     });
   });
 
