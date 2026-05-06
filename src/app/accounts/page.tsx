@@ -31,18 +31,15 @@ export default async function AccountsPage() {
             <input className="min-w-0 flex-1" name="name" required />
           </div>
           <div className="flex items-center gap-3">
-            <span className="w-20 shrink-0 text-sm font-medium text-slate-600">비밀번호</span>
-            <input className="min-w-0 flex-1" name="password" required type="password" />
-          </div>
-          <div className="flex items-center gap-3">
             <span className="w-20 shrink-0 text-sm font-medium text-slate-600">권한</span>
             <select className="min-w-0 flex-1" name="role">
               <option value="user">일반</option>
               <option value="master">마스터</option>
             </select>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
             <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">추가</button>
+            <span className="text-xs text-slate-400">초기 비밀번호: visang123!</span>
           </div>
         </form>
       </section>
@@ -59,7 +56,7 @@ export default async function AccountsPage() {
                 <th className="px-4 py-2.5 text-left font-medium">이름</th>
                 <th className="px-4 py-2.5 text-left font-medium">이메일</th>
                 <th className="px-4 py-2.5 text-left font-medium">권한 변경</th>
-                <th className="px-4 py-2.5 text-left font-medium">비밀번호 재설정</th>
+                <th className="px-4 py-2.5 text-left font-medium">비밀번호 초기화</th>
                 <th className="px-4 py-2.5 text-center font-medium"></th>
               </tr>
             </thead>
@@ -83,9 +80,8 @@ export default async function AccountsPage() {
                     )}
                   </td>
                   <td className="px-4 py-2.5">
-                    <form action={resetPasswordAction.bind(null, user.id)} className="flex items-center gap-2">
-                      <input className="w-40" name="password" placeholder="새 비밀번호" type="password" />
-                      <button className="rounded-md bg-slate-100 px-3 py-1.5 text-xs text-slate-700">변경</button>
+                    <form action={resetPasswordAction.bind(null, user.id)}>
+                      <button className="rounded-md bg-slate-100 px-3 py-1.5 text-xs text-slate-700">초기화</button>
                     </form>
                   </td>
                   <td className="px-4 py-2.5 text-center">

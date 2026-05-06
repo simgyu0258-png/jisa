@@ -11,17 +11,18 @@ async function requireMaster() {
   if (!session || session.user.role !== "master") redirect("/");
 }
 
+const DEFAULT_PASSWORD = "visang123!";
+
 export async function createAccountAction(formData: FormData) {
   await requireMaster();
 
   const email = String(formData.get("email") || "").trim();
   const name = String(formData.get("name") || "").trim();
-  const password = String(formData.get("password") || "");
   const role = String(formData.get("role") || "user");
 
-  if (!email || !name || !password) redirect("/accounts?error=required");
+  if (!email || !name) redirect("/accounts?error=required");
 
-  const hashed = await bcrypt.hash(password, 12);
+  const hashed = await bcrypt.hash(DEFAULT_PASSWORD, 12);
   await prisma.user.create({ data: { email, name, password: hashed, role } });
 
   revalidatePath("/accounts");
@@ -47,14 +48,10 @@ export async function updateRoleAction(userId: number, formData: FormData) {
   revalidatePath("/accounts");
 }
 
-export async function resetPasswordAction(userId: number, formData: FormData) {
+export async function resetPasswordAction(userId: number) {
   await requireMaster();
 
-  const password = String(formData.get("password") || "");
-  if (!password) redirect("/accounts?error=required");
-
-  const hashed = await bcrypt.hash(password, 12);
+  const hashed = await bcrypt.hash(DEFAULT_PASSWORD, 12);
   await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
   revalidatePath("/accounts");
-  redirect("/accounts");
 }
