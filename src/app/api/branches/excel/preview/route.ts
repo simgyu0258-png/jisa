@@ -1,6 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
+
+export type InstitutionRow = { name: string; phone: string | null; address: string | null };
 
 export type BranchPreviewRow = {
   name: string;
@@ -11,7 +15,7 @@ export type BranchPreviewRow = {
   address: string | null;
   memo: string | null;
   permissions: Record<number, boolean>;
-  institutions: string[];
+  institutions: InstitutionRow[];
 };
 
 export type BranchPreviewResponse = {
@@ -24,6 +28,14 @@ export type BranchPreviewResponse = {
 function isTruthy(value: unknown) {
   const s = String(value ?? "").trim().toLowerCase();
   return s === "1" || s === "o" || s === "y" || s === "yes" || s === "true";
+}
+
+function col(row: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const v = String(row[key] ?? "").trim();
+    if (v) return v;
+  }
+  return "";
 }
 
 export async function POST(request: Request) {
@@ -53,29 +65,35 @@ export async function POST(request: Request) {
 
   rows.forEach((row, index) => {
     const excelRow = index + 2;
-    const name = String(row["지사명*"] ?? row["지사명"] ?? "").trim();
-    const institutionName = String(row["기관명"] ?? "").trim();
+    const name = col(row, "지사명*", "지사명");
+    const institutionName = col(row, "기관명");
+    const institutionPhone = col(row, "기관 연락처") || null;
+    const institutionAddress = col(row, "기관 주소") || null;
 
     if (!name) {
-      // 지사명 없음 → 기관명만 있으면 직전 지사에 추가
+      // 지사명 없음 → 기관명이 있으면 직전 지사에 추가
       if (institutionName && payload.length > 0) {
-        payload[payload.length - 1].institutions.push(institutionName);
+        payload[payload.length - 1].institutions.push({
+          name: institutionName,
+          phone: institutionPhone,
+          address: institutionAddress,
+        });
       }
       return;
     }
 
-    // 지사명 있음 → 새 지사 행
-    const region = String(row["지역*"] ?? row["지역"] ?? "").trim();
-    const managerName = String(row["담당자*"] ?? row["담당자"] ?? "").trim();
-    const phone = String(row["연락처*"] ?? row["연락처"] ?? "").trim();
-    const statusRaw = String(row["상태"] ?? "활성").trim();
-    const address = String(row["주소"] ?? "").trim() || null;
-    const memo = String(row["메모"] ?? "").trim() || null;
+    // 지사명 있음 → 새 지사
+    const region = col(row, "지역*", "지역");
+    const managerName = col(row, "지사 담당자*", "지사 담당자", "담당자*", "담당자");
+    const phone = col(row, "지사 연락처*", "지사 연락처", "연락처*", "연락처");
+    const address = col(row, "지사 주소", "주소") || null;
+    const statusRaw = col(row, "상태") || "활성";
+    const memo = col(row, "메모") || null;
 
     const rowErrors: string[] = [];
     if (!region) rowErrors.push("지역 필수");
-    if (!managerName) rowErrors.push("담당자 필수");
-    if (!phone) rowErrors.push("연락처 필수");
+    if (!managerName) rowErrors.push("지사 담당자 필수");
+    if (!phone) rowErrors.push("지사 연락처 필수");
     if (existingNames.has(name)) rowErrors.push(`지사명 중복(DB): ${name}`);
     if (seenNames.has(name)) rowErrors.push(`지사명 중복(파일 내): ${name}`);
 
@@ -99,7 +117,9 @@ export async function POST(request: Request) {
       address,
       memo,
       permissions,
-      institutions: institutionName ? [institutionName] : [],
+      institutions: institutionName
+        ? [{ name: institutionName, phone: institutionPhone, address: institutionAddress }]
+        : [],
     });
   });
 

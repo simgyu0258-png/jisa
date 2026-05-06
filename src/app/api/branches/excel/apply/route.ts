@@ -41,7 +41,11 @@ export async function POST(request: Request) {
             })),
           },
           institutions: item.institutions && item.institutions.length > 0
-            ? { create: item.institutions.map((instName) => ({ name: instName })) }
+            ? { create: item.institutions.map((inst) => ({
+                name: typeof inst === "string" ? inst : inst.name,
+                phone: typeof inst === "string" ? null : inst.phone,
+                address: typeof inst === "string" ? null : inst.address,
+              })) }
             : undefined,
         },
       });
