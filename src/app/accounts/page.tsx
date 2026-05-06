@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { createAccountAction, deleteAccountAction, resetPasswordAction } from "./actions";
+import { createAccountAction, deleteAccountAction, resetPasswordAction, updateRoleAction } from "./actions";
 
 export default async function AccountsPage() {
   const session = await auth();
@@ -57,7 +57,7 @@ export default async function AccountsPage() {
               <tr>
                 <th className="px-4 py-2.5 text-left font-medium">이름</th>
                 <th className="px-4 py-2.5 text-left font-medium">이메일</th>
-                <th className="px-4 py-2.5 text-left font-medium">권한</th>
+                <th className="px-4 py-2.5 text-left font-medium">권한 변경</th>
                 <th className="px-4 py-2.5 text-left font-medium">비밀번호 재설정</th>
                 <th className="px-4 py-2.5 text-center font-medium"></th>
               </tr>
@@ -73,13 +73,19 @@ export default async function AccountsPage() {
                   </td>
                   <td className="px-4 py-2.5 text-slate-600">{user.email}</td>
                   <td className="px-4 py-2.5">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      user.role === "master"
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-700"
-                    }`}>
-                      {user.role === "master" ? "마스터" : "일반"}
-                    </span>
+                    {user.id === Number(session.user.id) ? (
+                      <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white">
+                        마스터 (나)
+                      </span>
+                    ) : (
+                      <form action={updateRoleAction.bind(null, user.id)} className="flex items-center gap-2">
+                        <select className="text-sm" defaultValue={user.role} name="role">
+                          <option value="master">마스터</option>
+                          <option value="user">일반</option>
+                        </select>
+                        <button className="rounded-md bg-slate-100 px-3 py-1.5 text-xs text-slate-700">변경</button>
+                      </form>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <form action={resetPasswordAction.bind(null, user.id)} className="flex items-center gap-2">
