@@ -6,11 +6,6 @@ import { auth } from "@/auth";
 import { getPreviousYearMonth } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
 
-async function requireMaster() {
-  const session = await auth();
-  if (!session || session.user.role !== "master") redirect("/");
-}
-
 async function requireAuth() {
   const session = await auth();
   if (!session) redirect("/login");
@@ -21,7 +16,7 @@ function toInt(value: FormDataEntryValue | null) {
 }
 
 export async function updateBranchInfoAction(branchId: number, formData: FormData) {
-  await requireMaster();
+  await requireAuth();
   await prisma.branch.update({
     where: { id: branchId },
     data: {
@@ -41,7 +36,7 @@ export async function updateBranchInfoAction(branchId: number, formData: FormDat
 }
 
 export async function updatePermissionsAction(branchId: number, formData: FormData) {
-  await requireMaster();
+  await requireAuth();
   const mode = String(formData.get("mode") || "");
   const selectedIds = new Set(
     formData

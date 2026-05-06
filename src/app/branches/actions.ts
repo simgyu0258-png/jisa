@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-async function requireMaster() {
+async function requireAuth() {
   const session = await auth();
-  if (!session || session.user.role !== "master") redirect("/");
+  if (!session) redirect("/login");
 }
 
 async function generateBranchCode() {
@@ -24,7 +24,7 @@ async function generateBranchCode() {
 }
 
 export async function createBranchAction(formData: FormData) {
-  await requireMaster();
+  await requireAuth();
   const name = String(formData.get("name") || "").trim();
   const region = String(formData.get("region") || "").trim();
   const status = String(formData.get("status") || "active");
