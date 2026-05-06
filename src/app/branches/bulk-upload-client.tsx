@@ -70,7 +70,7 @@ export function BranchBulkUploadClient() {
             </a>
           </p>
           <p className="text-xs text-slate-400">
-            필수: 지사명, 지역, 담당자, 연락처 · 선택: 상태(활성/비활성), 주소, 기관1~기관5 ·
+            지사명이 있는 행이 새 지사 시작 · 지사명 없이 기관명만 입력하면 바로 위 지사의 기관으로 등록 ·
             판매권한: 프로그램명 컬럼에 1(권한있음) / 0(권한없음)
           </p>
           <form

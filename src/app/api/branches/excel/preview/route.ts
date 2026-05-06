@@ -54,6 +54,17 @@ export async function POST(request: Request) {
   rows.forEach((row, index) => {
     const excelRow = index + 2;
     const name = String(row["지사명*"] ?? row["지사명"] ?? "").trim();
+    const institutionName = String(row["기관명"] ?? "").trim();
+
+    if (!name) {
+      // 지사명 없음 → 기관명만 있으면 직전 지사에 추가
+      if (institutionName && payload.length > 0) {
+        payload[payload.length - 1].institutions.push(institutionName);
+      }
+      return;
+    }
+
+    // 지사명 있음 → 새 지사 행
     const region = String(row["지역*"] ?? row["지역"] ?? "").trim();
     const managerName = String(row["담당자*"] ?? row["담당자"] ?? "").trim();
     const phone = String(row["연락처*"] ?? row["연락처"] ?? "").trim();
@@ -62,12 +73,11 @@ export async function POST(request: Request) {
     const memo = String(row["메모"] ?? "").trim() || null;
 
     const rowErrors: string[] = [];
-    if (!name) rowErrors.push("지사명 필수");
     if (!region) rowErrors.push("지역 필수");
     if (!managerName) rowErrors.push("담당자 필수");
     if (!phone) rowErrors.push("연락처 필수");
-    if (name && existingNames.has(name)) rowErrors.push(`지사명 중복(DB): ${name}`);
-    if (name && seenNames.has(name)) rowErrors.push(`지사명 중복(파일 내): ${name}`);
+    if (existingNames.has(name)) rowErrors.push(`지사명 중복(DB): ${name}`);
+    if (seenNames.has(name)) rowErrors.push(`지사명 중복(파일 내): ${name}`);
 
     if (rowErrors.length > 0) {
       errors.push({ row: excelRow, message: rowErrors.join(", ") });
@@ -79,10 +89,6 @@ export async function POST(request: Request) {
       permissions[program.id] = programByName.has(program.name) && isTruthy(row[program.name]);
     }
 
-    const institutions = [1, 2, 3, 4, 5]
-      .map((n) => String(row[`기관${n}`] ?? "").trim())
-      .filter(Boolean);
-
     seenNames.add(name);
     payload.push({
       name,
@@ -93,7 +99,7 @@ export async function POST(request: Request) {
       address,
       memo,
       permissions,
-      institutions,
+      institutions: institutionName ? [institutionName] : [],
     });
   });
 
