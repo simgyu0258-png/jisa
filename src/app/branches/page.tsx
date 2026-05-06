@@ -34,20 +34,29 @@ export default async function BranchesPage({
         ? { region: "asc" as const }
         : { updatedAt: "desc" as const };
 
-  const branches = await prisma.branch.findMany({
-    where,
-    include: {
-      permissions: { where: { isEnabled: true }, include: { program: true } },
-      sales: { where: { yearMonth } },
-    },
-    orderBy,
-  });
+  const [branches, monthOrders] = await Promise.all([
+    prisma.branch.findMany({
+      where,
+      include: { permissions: { where: { isEnabled: true }, include: { program: true } } },
+      orderBy,
+    }),
+    prisma.saleOrder.findMany({
+      where: { orderDate: { startsWith: yearMonth } },
+      select: { institution: { select: { branchId: true } }, quantity: true },
+    }),
+  ]);
+
+  const branchTotals = new Map<number, number>();
+  for (const o of monthOrders) {
+    const bid = o.institution.branchId;
+    branchTotals.set(bid, (branchTotals.get(bid) ?? 0) + o.quantity);
+  }
 
   const rows = branches
     .map((branch) => ({
       ...branch,
       enabledPrograms: branch.permissions.map((p) => p.program.name),
-      monthTotal: branch.sales.reduce((sum, sale) => sum + sale.quantity, 0),
+      monthTotal: branchTotals.get(branch.id) ?? 0,
     }))
     .sort((a, b) => (sort === "sales" ? b.monthTotal - a.monthTotal : 0));
 

@@ -1,11 +1,14 @@
 import { auth } from "@/auth";
 import { getCurrentYearMonth } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
-import { SalesFilterClient } from "./filter-client";
-import { SalesTableClient } from "./sales-table-client";
-import { SalesUploadClient } from "./upload-client";
+import { SalesViewClient } from "./sales-view-client";
 
-type Params = { yearMonth?: string | string[]; q?: string; region?: string; status?: string };
+type Params = {
+  view?: string;
+  branchId?: string;
+  programId?: string;
+  ym?: string;
+};
 
 export default async function SalesPage({
   searchParams,
@@ -14,69 +17,66 @@ export default async function SalesPage({
 }) {
   const [params, session] = await Promise.all([searchParams, auth()]);
 
-  const rawYearMonth = params.yearMonth;
-  const yearMonths: string[] =
-    rawYearMonth == null
-      ? [getCurrentYearMonth()]
-      : Array.isArray(rawYearMonth)
-        ? rawYearMonth
-        : [rawYearMonth];
+  const view = params.view === "issue" ? "issue" : "monthly";
+  const branchId = params.branchId ? Number(params.branchId) : undefined;
+  const programId = params.programId ? Number(params.programId) : undefined;
+  const ym = params.ym ?? getCurrentYearMonth();
 
-  const q = params.q?.trim() ?? "";
-  const region = params.region?.trim() ?? "";
-  const status = params.status?.trim() ?? "";
-
-  const [programs, branches] = await Promise.all([
+  const [branches, programs, institutions] = await Promise.all([
+    prisma.branch.findMany({ orderBy: { name: "asc" } }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
-    prisma.branch.findMany({
-      where: {
-        ...(q ? { name: { contains: q } } : {}),
-        ...(region ? { region: { contains: region } } : {}),
-        ...(status === "active" || status === "inactive" ? { status } : {}),
-      },
-      include: {
-        sales: { where: { yearMonth: { in: yearMonths } }, orderBy: { programId: "asc" } },
-        permissions: { select: { programId: true, isEnabled: true } },
-      },
-      orderBy: { name: "asc" },
+    prisma.institution.findMany({
+      where: branchId ? { branchId } : undefined,
+      include: { branch: { select: { name: true } } },
+      orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],
     }),
   ]);
 
-  branches.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  // 월별 뷰: 선택 월의 주문 집계 (기관 × 프로그램)
+  const monthlyOrders = view === "monthly"
+    ? await prisma.saleOrder.findMany({
+        where: {
+          orderDate: { startsWith: ym },
+          ...(branchId ? { institution: { branchId } } : {}),
+          ...(programId ? { programId } : {}),
+        },
+        select: { institutionId: true, programId: true, quantity: true },
+      })
+    : [];
 
-  const downloadQuery = yearMonths.map((ym) => `yearMonth=${ym}`).join("&");
-  const canEdit = !!session;
+  // 호별 뷰: 선택 프로그램의 호별 집계 (기관 × 호)
+  const issueOrders = view === "issue"
+    ? await prisma.saleOrder.findMany({
+        where: {
+          ...(programId ? { programId } : {}),
+          ...(branchId ? { institution: { branchId } } : {}),
+        },
+        select: { institutionId: true, issueNumber: true, quantity: true, orderDate: true },
+      })
+    : [];
+
+  const selectedProgram = programs.find((p) => p.id === programId);
+  const maxIssues = selectedProgram?.totalIssues ?? Math.max(...programs.map((p) => p.totalIssues), 12);
+
+  const instList = institutions.map((inst) => ({
+    id: inst.id,
+    name: inst.name,
+    branchName: inst.branch.name,
+  }));
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">판매부수 조회 및 관리</h1>
-
-      <SalesFilterClient q={q} region={region} selectedMonths={yearMonths} status={status} />
-
-      <div className="flex items-center gap-2">
-        <a
-          className="inline-block rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
-          href={`/api/sales/excel/download?${downloadQuery}`}
-        >
-          엑셀 다운로드
-          {yearMonths.length > 1 && ` (${yearMonths.length}개월)`}
-        </a>
-        <span className="text-xs text-slate-400">
-          {yearMonths.length === 1
-            ? yearMonths[0]
-            : `${yearMonths[0]} ~ ${yearMonths[yearMonths.length - 1]}`}
-          {" "}합산 기준
-        </span>
-      </div>
-
-      <SalesTableClient
-        branches={branches}
-        canEdit={canEdit}
-        programs={programs}
-        selectedMonths={yearMonths}
-      />
-
-      <SalesUploadClient />
-    </div>
+    <SalesViewClient
+      branches={branches}
+      programs={programs}
+      institutions={instList}
+      monthlyOrders={monthlyOrders}
+      issueOrders={issueOrders}
+      view={view}
+      selectedBranchId={branchId}
+      selectedProgramId={programId}
+      selectedYm={ym}
+      maxIssues={maxIssues}
+      canEdit={!!session}
+    />
   );
 }

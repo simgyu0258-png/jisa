@@ -13,7 +13,13 @@
       "Bash(node -e ' *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(echo \"\" > \"c:/dev/jisa/src/app/branches/[id]/page.tsx\")",
+      "Bash(node prisma/seed.js)",
+      "Bash(npx next *)"
+    ],
+    "additionalDirectories": [
+      "c:\\dev\\jisa\\src\\app\\branches\\[id]"
     ]
   }
 }

@@ -5,17 +5,19 @@ import { prisma } from "@/lib/prisma";
 
 export async function addProgramAction(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
+  const totalIssues = Math.max(1, Number(formData.get("totalIssues")) || 12);
   if (!name) return;
 
-  await prisma.program.create({ data: { name } });
+  await prisma.program.create({ data: { name, totalIssues } });
   revalidatePath("/programs");
 }
 
-export async function renameProgramAction(id: number, name: string) {
-  const trimmed = name.trim();
-  if (!trimmed) return;
+export async function updateProgramAction(id: number, formData: FormData) {
+  const name = String(formData.get("name") || "").trim();
+  const totalIssues = Math.max(1, Number(formData.get("totalIssues")) || 12);
+  if (!name) return;
 
-  await prisma.program.update({ where: { id }, data: { name: trimmed } });
+  await prisma.program.update({ where: { id }, data: { name, totalIssues } });
   revalidatePath("/programs");
 }
 

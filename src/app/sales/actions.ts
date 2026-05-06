@@ -10,26 +10,30 @@ async function requireAuth() {
   if (!session) redirect("/login");
 }
 
-export async function saveSalesFromPageAction(
-  branchId: number,
-  yearMonth: string,
-  quantities: Record<number, number>,
+export async function upsertSaleOrderAction(
+  institutionId: number,
+  programId: number,
+  issueNumber: number,
+  orderDate: string,
+  quantity: number,
 ) {
   await requireAuth();
 
-  const programIds = Object.keys(quantities).map(Number);
-  if (!yearMonth || programIds.length === 0) return;
+  await prisma.saleOrder.upsert({
+    where: { institutionId_programId_issueNumber: { institutionId, programId, issueNumber } },
+    create: { institutionId, programId, issueNumber, orderDate, quantity: Math.max(0, quantity) },
+    update: { orderDate, quantity: Math.max(0, quantity) },
+  });
 
-  await prisma.$transaction(async (tx) => {
-    await tx.sale.deleteMany({ where: { branchId, yearMonth, programId: { in: programIds } } });
-    await tx.sale.createMany({
-      data: programIds.map((programId) => ({
-        branchId,
-        yearMonth,
-        programId,
-        quantity: Math.max(0, quantities[programId] ?? 0),
-      })),
-    });
+  revalidatePath("/sales");
+  revalidatePath("/");
+}
+
+export async function deleteSaleOrderAction(institutionId: number, programId: number, issueNumber: number) {
+  await requireAuth();
+
+  await prisma.saleOrder.deleteMany({
+    where: { institutionId, programId, issueNumber },
   });
 
   revalidatePath("/sales");
