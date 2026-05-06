@@ -24,7 +24,7 @@ export function MainNav({ userName, userRole }: Props) {
   const isMaster = userRole === "master";
 
   return (
-    <aside className="w-full border-b border-slate-200 bg-white lg:w-64 lg:border-b-0 lg:border-r lg:flex lg:flex-col">
+    <aside className="w-full border-b border-slate-200 bg-white lg:w-64 lg:border-b-0 lg:border-r lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen">
       <div className="px-6 py-5 text-lg font-bold text-slate-900">지사 관리 시스템</div>
       <nav className="flex gap-2 px-4 pb-4 lg:flex-col lg:flex-1">
         {menus.filter((m) => !m.masterOnly || isMaster).map((menu) => {
