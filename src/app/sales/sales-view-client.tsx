@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OrderModal } from "./order-modal";
 
@@ -14,7 +15,7 @@ export function SalesViewClient({
   branches, programs, institutions, allInstitutions,
   monthlyOrders, issueOrders,
   view, selectedBranchId, selectedProgramId, selectedYm,
-  maxIssues, canEdit,
+  maxIssues, canEdit, canBulkEdit,
 }: {
   branches: Branch[];
   programs: Program[];
@@ -28,6 +29,7 @@ export function SalesViewClient({
   selectedYm: string;
   maxIssues: number;
   canEdit: boolean;
+  canBulkEdit?: boolean;
 }) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -57,8 +59,6 @@ export function SalesViewClient({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">판매부수 조회 및 관리</h1>
-
       {/* 필터 */}
       <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-4">
         <select className="flex-1 min-w-36" value={selectedBranchId ?? ""} onChange={(e) => navigate({ branchId: e.target.value || undefined })}>
@@ -87,10 +87,18 @@ export function SalesViewClient({
           >호별 현황</button>
         </div>
         {canEdit && (
-          <button
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
-            onClick={() => setShowModal(true)}
-          >판매부수 입력</button>
+          <div className="flex items-center gap-2">
+            {canBulkEdit && (
+              <>
+                <Link className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="/sales/bulk-edit">일괄 수정</Link>
+                <Link className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="/sales/bulk">일괄 등록</Link>
+              </>
+            )}
+            <button
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
+              onClick={() => setShowModal(true)}
+            >판매부수 입력</button>
+          </div>
         )}
       </div>
 
