@@ -1,8 +1,8 @@
+import Link from "next/link";
 import { auth } from "@/auth";
 import { getCurrentYearMonth } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
 import { SalesViewClient } from "./sales-view-client";
-import { SalesBulkUpload } from "./sales-bulk-upload";
 
 type Params = {
   view?: string;
@@ -33,7 +33,6 @@ export default async function SalesPage({
     }),
   ]);
 
-  // 월별 뷰: 선택 월의 주문 집계 (기관 × 프로그램)
   const monthlyOrders = view === "monthly"
     ? await prisma.saleOrder.findMany({
         where: {
@@ -45,7 +44,6 @@ export default async function SalesPage({
       })
     : [];
 
-  // 호별 뷰: 선택 프로그램의 호별 집계 (기관 × 호)
   const issueOrders = view === "issue"
     ? await prisma.saleOrder.findMany({
         where: {
@@ -59,7 +57,6 @@ export default async function SalesPage({
   const selectedProgram = programs.find((p) => p.id === programId);
   const maxIssues = selectedProgram?.totalIssues ?? Math.max(...programs.map((p) => p.totalIssues), 12);
 
-  // 모달용: 전체 기관 목록 (branchId 필터 없이)
   const allInstitutions = branchId
     ? await prisma.institution.findMany({
         include: { branch: { select: { name: true } } },
@@ -68,36 +65,48 @@ export default async function SalesPage({
     : institutions;
 
   const instList = institutions.map((inst) => ({
-    id: inst.id,
-    name: inst.name,
-    branchName: inst.branch.name,
-    branchId: inst.branchId,
+    id: inst.id, name: inst.name, branchName: inst.branch.name, branchId: inst.branchId,
   }));
 
   const allInstList = allInstitutions.map((inst) => ({
-    id: inst.id,
-    name: inst.name,
-    branchName: inst.branch.name,
-    branchId: inst.branchId,
+    id: inst.id, name: inst.name, branchName: inst.branch.name, branchId: inst.branchId,
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">판매부수 조회 및 관리</h1>
+        {!!session && (
+          <div className="flex gap-2">
+            <Link
+              className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              href="/sales/bulk-edit"
+            >
+              일괄 수정
+            </Link>
+            <Link
+              className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              href="/sales/bulk"
+            >
+              일괄 등록
+            </Link>
+          </div>
+        )}
+      </div>
       <SalesViewClient
-      branches={branches}
-      programs={programs}
-      institutions={instList}
-      allInstitutions={allInstList}
-      monthlyOrders={monthlyOrders}
-      issueOrders={issueOrders}
-      view={view}
-      selectedBranchId={branchId}
-      selectedProgramId={programId}
-      selectedYm={ym}
-      maxIssues={maxIssues}
-      canEdit={!!session}
-    />
-    {!!session && <SalesBulkUpload />}
+        branches={branches}
+        programs={programs}
+        institutions={instList}
+        allInstitutions={allInstList}
+        monthlyOrders={monthlyOrders}
+        issueOrders={issueOrders}
+        view={view}
+        selectedBranchId={branchId}
+        selectedProgramId={programId}
+        selectedYm={ym}
+        maxIssues={maxIssues}
+        canEdit={!!session}
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SaleOrderPreviewRow, SaleOrderPreviewResponse } from "@/app/api/sales/excel/preview/route";
 
-export function SalesBulkUpload() {
+export function SalesBulkUpload({ mode = "register" }: { mode?: "register" | "edit" }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<SaleOrderPreviewResponse | null>(null);
@@ -52,14 +52,27 @@ export function SalesBulkUpload() {
     <div className="space-y-4">
       <section className="rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">판매부수 일괄등록</h2>
-          <button
-            className="text-sm text-slate-500 underline hover:text-slate-900"
-            onClick={() => { window.location.href = `/api/sales/excel/template?t=${Date.now()}`; }}
-            type="button"
-          >
-            양식 다운로드
-          </button>
+          <h2 className="font-semibold text-slate-800">
+            {mode === "edit" ? "판매부수 일괄 수정" : "판매부수 일괄 등록"}
+          </h2>
+          <div className="flex gap-3">
+            {mode === "edit" && (
+              <button
+                className="text-sm text-slate-500 underline hover:text-slate-900"
+                onClick={() => { window.location.href = `/api/sales/excel/download?t=${Date.now()}`; }}
+                type="button"
+              >
+                현재 데이터 다운로드
+              </button>
+            )}
+            <button
+              className="text-sm text-slate-500 underline hover:text-slate-900"
+              onClick={() => { window.location.href = `/api/sales/excel/template?t=${Date.now()}`; }}
+              type="button"
+            >
+              양식 다운로드
+            </button>
+          </div>
         </div>
         <div className="p-5 space-y-3">
           <p className="text-xs text-slate-400">
