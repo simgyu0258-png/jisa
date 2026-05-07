@@ -59,6 +59,8 @@ export function SalesViewClient({
 
   return (
     <div className="space-y-4">
+      <h1 className="text-2xl font-bold">판매부수 조회 및 관리</h1>
+
       {/* 필터 */}
       <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-4">
         <select className="flex-1 min-w-36" value={selectedBranchId ?? ""} onChange={(e) => navigate({ branchId: e.target.value || undefined })}>
