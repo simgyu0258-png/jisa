@@ -53,7 +53,7 @@ export default async function SalesPage({
           ...(programId ? { programId } : {}),
           ...(branchId ? { institution: { branchId } } : {}),
         },
-        select: { institutionId: true, issueNumber: true, quantity: true, orderDate: true },
+        select: { institutionId: true, programId: true, issueNumber: true, quantity: true },
       })
     : [];
 

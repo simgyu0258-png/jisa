@@ -9,7 +9,7 @@ type Branch = { id: number; name: string };
 type Program = { id: number; name: string; totalIssues: number };
 type Institution = { id: number; name: string; branchName: string; branchId: number };
 type MonthlyOrder = { institutionId: number; programId: number; quantity: number };
-type IssueOrder = { institutionId: number; issueNumber: number; quantity: number; orderDate: string };
+type IssueOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
 
 export function SalesViewClient({
   branches, programs, institutions, allInstitutions,
@@ -65,11 +65,10 @@ export function SalesViewClient({
     monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + o.quantity);
   }
 
-  // 호별: (id, issueNumber) → quantity
+  // 호별: (programId, issueNumber) → quantity (지사 필터는 서버에서 처리됨)
   const issueMap = new Map<string, number>();
   for (const o of issueOrders) {
-    const id = isBranchView ? (instBranchMap.get(o.institutionId) ?? o.institutionId) : o.institutionId;
-    const key = `${id}-${o.issueNumber}`;
+    const key = `${o.programId}-${o.issueNumber}`;
     issueMap.set(key, (issueMap.get(key) ?? 0) + o.quantity);
   }
 
@@ -197,51 +196,63 @@ export function SalesViewClient({
         );
       })()}
 
-      {/* 호별 현황 테이블 */}
-      {view === "issue" && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="px-3 py-2 text-left">{isBranchView ? "지사" : "지사"}</th>
-                {!isBranchView && <th className="px-3 py-2 text-left">기관</th>}
-                {issueNumbers.map((n) => (
-                  <th className="px-3 py-2 text-right" key={n}>{n}호</th>
-                ))}
-                <th className="px-3 py-2 text-right font-semibold">합계</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={maxIssues + (isBranchView ? 2 : 3)}>데이터가 없습니다.</td></tr>
-              )}
-              {rows.map((row) => {
-                const values = issueNumbers.map((n) => issueMap.get(`${row.id}-${n}`) ?? 0);
-                const total = values.reduce((s, v) => s + v, 0);
-                return (
-                  <tr className="border-t border-slate-200 hover:bg-slate-50" key={row.id}>
-                    <td className="px-3 py-2">
-                      {isBranchView ? (
-                        <button className="text-left font-medium text-slate-700 hover:underline"
-                          onClick={() => navigate({ branchId: String(row.id) })}>
-                          {row.label}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate-400">{row.sub}</span>
-                      )}
+      {/* 호별 현황 테이블: 행=호, 열=프로그램 */}
+      {view === "issue" && (() => {
+        const visiblePrograms = programs.filter((p) => !selectedProgramId || p.id === selectedProgramId);
+        const colSpanEmpty = visiblePrograms.length + 2;
+        return (
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="px-3 py-2 text-left">호</th>
+                  {visiblePrograms.map((p) => (
+                    <th className="px-3 py-2 text-right" key={p.id}>{p.name}</th>
+                  ))}
+                  <th className="px-3 py-2 text-right font-semibold">합계</th>
+                </tr>
+              </thead>
+              <tbody>
+                {issueNumbers.length === 0 && (
+                  <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={colSpanEmpty}>데이터가 없습니다.</td></tr>
+                )}
+                {issueNumbers.map((n) => {
+                  const values = visiblePrograms.map((p) => {
+                    if (n > p.totalIssues) return null;
+                    return issueMap.get(`${p.id}-${n}`) ?? 0;
+                  });
+                  const total = values.reduce<number>((s, v) => s + (v ?? 0), 0);
+                  return (
+                    <tr className="border-t border-slate-200 hover:bg-slate-50" key={n}>
+                      <td className="px-3 py-2 font-medium text-slate-700">{n}호</td>
+                      {values.map((v, i) => (
+                        <td className="px-3 py-2 text-right" key={visiblePrograms[i].id}>
+                          {v === null ? <span className="text-slate-200">—</span> : v > 0 ? v.toLocaleString() : "-"}
+                        </td>
+                      ))}
+                      <td className="px-3 py-2 text-right font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              {issueNumbers.length > 0 && (
+                <tfoot className="bg-slate-50 font-semibold">
+                  <tr>
+                    <td className="px-3 py-2">합계</td>
+                    {visiblePrograms.map((p) => {
+                      const total = issueNumbers.reduce((s, n) => s + (issueMap.get(`${p.id}-${n}`) ?? 0), 0);
+                      return <td className="px-3 py-2 text-right" key={p.id}>{total > 0 ? total.toLocaleString() : "-"}</td>;
+                    })}
+                    <td className="px-3 py-2 text-right">
+                      {visiblePrograms.reduce((s, p) => s + issueNumbers.reduce((ss, n) => ss + (issueMap.get(`${p.id}-${n}`) ?? 0), 0), 0).toLocaleString()}
                     </td>
-                    {!isBranchView && <td className="px-3 py-2">{row.label}</td>}
-                    {values.map((v, i) => (
-                      <td className="px-3 py-2 text-right" key={issueNumbers[i]}>{v > 0 ? v.toLocaleString() : "-"}</td>
-                    ))}
-                    <td className="px-3 py-2 text-right font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                </tfoot>
+              )}
+            </table>
+          </div>
+        );
+      })()}
 
       {showModal && (
         <OrderModal
