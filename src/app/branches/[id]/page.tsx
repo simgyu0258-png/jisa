@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import {
-  createInstitutionAction,
-  deleteInstitutionAction,
-  updateBranchInfoAction,
-  updatePermissionsAction,
-} from "./actions";
+import { updateBranchInfoAction, updatePermissionsAction } from "./actions";
 
 export default async function BranchDetailPage({
   params,
@@ -21,7 +16,6 @@ export default async function BranchDetailPage({
       where: { id: branchId },
       include: {
         permissions: { include: { program: true }, orderBy: { programId: "asc" } },
-        institutions: { orderBy: { name: "asc" } },
       },
     }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
@@ -110,67 +104,6 @@ export default async function BranchDetailPage({
             <button className="rounded-md bg-slate-100 px-4 py-2 text-sm text-slate-700" name="mode" value="disable_all">전체 해제</button>
           </div>
         </form>
-      </section>
-
-      {/* 기관 관리 */}
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="font-semibold text-slate-800">기관 관리</h2>
-        </div>
-        <div className="p-5 space-y-4">
-          {branch.institutions.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium">기관명</th>
-                    <th className="px-3 py-2 text-left font-medium">연락처</th>
-                    <th className="px-3 py-2 text-left font-medium">주소</th>
-                    <th className="px-3 py-2 text-center font-medium">상태</th>
-                    <th className="px-3 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {branch.institutions.map((inst) => (
-                    <tr className="border-t border-slate-100" key={inst.id}>
-                      <td className="px-3 py-2 font-medium text-slate-700">{inst.name}</td>
-                      <td className="px-3 py-2 text-slate-500">{inst.phone ?? "-"}</td>
-                      <td className="px-3 py-2 text-slate-500">{inst.address ?? "-"}</td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          inst.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                        }`}>
-                          {inst.status === "active" ? "활성" : "비활성"}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <form action={deleteInstitutionAction.bind(null, inst.id, branchId)}>
-                          <button className="text-xs text-rose-500 hover:underline">삭제</button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {branch.institutions.length === 0 && (
-            <p className="text-sm text-slate-400">등록된 기관이 없습니다.</p>
-          )}
-
-          <form action={createInstitutionAction.bind(null, branchId)} className="space-y-2 rounded-lg border border-slate-100 bg-slate-50 p-4">
-            <p className="mb-2 text-xs font-medium text-slate-500">기관 추가</p>
-            <div className="flex flex-wrap gap-2">
-              <input className="min-w-40 flex-1" name="name" placeholder="기관명 *" required />
-              <input className="min-w-32 flex-1" name="phone" placeholder="연락처" />
-              <input className="min-w-48 flex-1" name="address" placeholder="주소" />
-            </div>
-            <div className="flex gap-2">
-              <input className="flex-1" name="memo" placeholder="메모" />
-              <button className="shrink-0 rounded-md bg-slate-900 px-4 py-2 text-sm text-white">추가</button>
-            </div>
-          </form>
-        </div>
       </section>
     </div>
   );

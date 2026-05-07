@@ -51,7 +51,7 @@ export function DashboardCharts({
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="issue" />
             <YAxis />
-            <Tooltip formatter={(v: number) => v.toLocaleString()} />
+            <Tooltip />
             <Bar dataKey="quantity" fill="#334155" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

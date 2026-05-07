@@ -5,6 +5,15 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+export async function createInstitutionAction(branchId: number, name: string): Promise<number> {
+  const session = await auth();
+  if (!session) redirect("/login");
+
+  const institution = await prisma.institution.create({ data: { branchId, name } });
+  revalidatePath("/sales");
+  return institution.id;
+}
+
 async function requireAuth() {
   const session = await auth();
   if (!session) redirect("/login");

@@ -6,12 +6,12 @@ import { OrderModal } from "./order-modal";
 
 type Branch = { id: number; name: string };
 type Program = { id: number; name: string; totalIssues: number };
-type Institution = { id: number; name: string; branchName: string };
+type Institution = { id: number; name: string; branchName: string; branchId: number };
 type MonthlyOrder = { institutionId: number; programId: number; quantity: number };
 type IssueOrder = { institutionId: number; issueNumber: number; quantity: number; orderDate: string };
 
 export function SalesViewClient({
-  branches, programs, institutions,
+  branches, programs, institutions, allInstitutions,
   monthlyOrders, issueOrders,
   view, selectedBranchId, selectedProgramId, selectedYm,
   maxIssues, canEdit,
@@ -19,6 +19,7 @@ export function SalesViewClient({
   branches: Branch[];
   programs: Program[];
   institutions: Institution[];
+  allInstitutions: Institution[];
   monthlyOrders: MonthlyOrder[];
   issueOrders: IssueOrder[];
   view: "monthly" | "issue";
@@ -186,8 +187,9 @@ export function SalesViewClient({
 
       {showModal && (
         <OrderModal
+          branches={branches}
           programs={programs}
-          institutions={institutions}
+          institutions={allInstitutions}
           onClose={() => { setShowModal(false); router.refresh(); }}
         />
       )}

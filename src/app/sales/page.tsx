@@ -58,10 +58,26 @@ export default async function SalesPage({
   const selectedProgram = programs.find((p) => p.id === programId);
   const maxIssues = selectedProgram?.totalIssues ?? Math.max(...programs.map((p) => p.totalIssues), 12);
 
+  // 모달용: 전체 기관 목록 (branchId 필터 없이)
+  const allInstitutions = branchId
+    ? await prisma.institution.findMany({
+        include: { branch: { select: { name: true } } },
+        orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],
+      })
+    : institutions;
+
   const instList = institutions.map((inst) => ({
     id: inst.id,
     name: inst.name,
     branchName: inst.branch.name,
+    branchId: inst.branchId,
+  }));
+
+  const allInstList = allInstitutions.map((inst) => ({
+    id: inst.id,
+    name: inst.name,
+    branchName: inst.branch.name,
+    branchId: inst.branchId,
   }));
 
   return (
@@ -69,6 +85,7 @@ export default async function SalesPage({
       branches={branches}
       programs={programs}
       institutions={instList}
+      allInstitutions={allInstList}
       monthlyOrders={monthlyOrders}
       issueOrders={issueOrders}
       view={view}

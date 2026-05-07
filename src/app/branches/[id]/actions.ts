@@ -66,37 +66,3 @@ export async function updatePermissionsAction(branchId: number, formData: FormDa
   revalidatePath(`/branches/${branchId}`);
   redirect(`/branches/${branchId}`);
 }
-
-export async function createInstitutionAction(branchId: number, formData: FormData) {
-  await requireAuth();
-  const name = String(formData.get("name") || "").trim();
-  const phone = String(formData.get("phone") || "").trim() || null;
-  const address = String(formData.get("address") || "").trim() || null;
-  const memo = String(formData.get("memo") || "").trim() || null;
-  if (!name) return;
-
-  await prisma.institution.create({ data: { branchId, name, phone, address, memo } });
-  revalidatePath(`/branches/${branchId}`);
-}
-
-export async function updateInstitutionAction(institutionId: number, branchId: number, formData: FormData) {
-  await requireAuth();
-  const name = String(formData.get("name") || "").trim();
-  const phone = String(formData.get("phone") || "").trim() || null;
-  const address = String(formData.get("address") || "").trim() || null;
-  const status = String(formData.get("status") || "active");
-  const memo = String(formData.get("memo") || "").trim() || null;
-  if (!name) return;
-
-  await prisma.institution.update({
-    where: { id: institutionId },
-    data: { name, phone, address, status, memo },
-  });
-  revalidatePath(`/branches/${branchId}`);
-}
-
-export async function deleteInstitutionAction(institutionId: number, branchId: number) {
-  await requireAuth();
-  await prisma.institution.delete({ where: { id: institutionId } });
-  revalidatePath(`/branches/${branchId}`);
-}
