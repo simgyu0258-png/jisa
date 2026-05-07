@@ -9,12 +9,12 @@ type Branch = { id: number; name: string };
 type Program = { id: number; name: string; totalIssues: number };
 type Institution = { id: number; name: string; branchName: string; branchId: number };
 type MonthlyOrder = { institutionId: number; programId: number; quantity: number };
-type IssueOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
+type IssueOrder = { institutionId: number; programId: number; quantity: number };
 
 export function SalesViewClient({
   branches, programs, institutions, allInstitutions,
   monthlyOrders, issueOrders,
-  view, selectedBranchId, selectedProgramId, selectedYm, selectedYear,
+  view, selectedBranchId, selectedProgramId, selectedYm, selectedYear, selectedIssueNum,
   maxIssues, canEdit, canBulkEdit,
 }: {
   branches: Branch[];
@@ -28,6 +28,7 @@ export function SalesViewClient({
   selectedProgramId?: number;
   selectedYm: string;
   selectedYear: string;
+  selectedIssueNum: number;
   maxIssues: number;
   canEdit: boolean;
   canBulkEdit?: boolean;
@@ -43,6 +44,7 @@ export function SalesViewClient({
       programId: selectedProgramId?.toString(),
       ym: selectedYm,
       year: selectedYear,
+      issueNum: selectedIssueNum.toString(),
       ...updates,
     };
     Object.entries(merged).forEach(([k, v]) => { if (v) sp.set(k, v); });
@@ -65,10 +67,11 @@ export function SalesViewClient({
     monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + o.quantity);
   }
 
-  // 호별: (programId, issueNumber) → quantity (지사 필터는 서버에서 처리됨)
+  // 호별: (id, programId) → quantity  (id = institutionId or branchId, 호/연도는 서버에서 필터)
   const issueMap = new Map<string, number>();
   for (const o of issueOrders) {
-    const key = `${o.programId}-${o.issueNumber}`;
+    const id = isBranchView ? (instBranchMap.get(o.institutionId) ?? o.institutionId) : o.institutionId;
+    const key = `${id}-${o.programId}`;
     issueMap.set(key, (issueMap.get(key) ?? 0) + o.quantity);
   }
 
@@ -97,11 +100,18 @@ export function SalesViewClient({
           <input className="w-36" type="month" value={selectedYm} onChange={(e) => navigate({ ym: e.target.value })} />
         )}
         {view === "issue" && (
-          <select className="w-36" value={selectedYear} onChange={(e) => navigate({ year: e.target.value })}>
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>{y}년</option>
-            ))}
-          </select>
+          <>
+            <select className="w-28" value={selectedYear} onChange={(e) => navigate({ year: e.target.value })}>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}년</option>
+              ))}
+            </select>
+            <select className="w-24" value={selectedIssueNum} onChange={(e) => navigate({ issueNum: e.target.value })}>
+              {Array.from({ length: maxIssues }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>{n}호</option>
+              ))}
+            </select>
+          </>
         )}
       </div>
 
@@ -196,16 +206,16 @@ export function SalesViewClient({
         );
       })()}
 
-      {/* 호별 현황 테이블: 행=호, 열=프로그램 */}
+      {/* 호별 현황 테이블: 행=지사/기관, 열=프로그램 */}
       {view === "issue" && (() => {
         const visiblePrograms = programs.filter((p) => !selectedProgramId || p.id === selectedProgramId);
-        const colSpanEmpty = visiblePrograms.length + 2;
         return (
           <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="px-3 py-2 text-left">호</th>
+                  <th className="px-3 py-2 text-left">{isBranchView ? "지사" : "지사"}</th>
+                  {!isBranchView && <th className="px-3 py-2 text-left">기관</th>}
                   {visiblePrograms.map((p) => (
                     <th className="px-3 py-2 text-right" key={p.id}>{p.name}</th>
                   ))}
@@ -213,38 +223,43 @@ export function SalesViewClient({
                 </tr>
               </thead>
               <tbody>
-                {issueNumbers.length === 0 && (
-                  <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={colSpanEmpty}>데이터가 없습니다.</td></tr>
+                {rows.length === 0 && (
+                  <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={visiblePrograms.length + (isBranchView ? 2 : 3)}>데이터가 없습니다.</td></tr>
                 )}
-                {issueNumbers.map((n) => {
-                  const values = visiblePrograms.map((p) => {
-                    if (n > p.totalIssues) return null;
-                    return issueMap.get(`${p.id}-${n}`) ?? 0;
-                  });
-                  const total = values.reduce<number>((s, v) => s + (v ?? 0), 0);
+                {rows.map((row) => {
+                  const values = visiblePrograms.map((p) => issueMap.get(`${row.id}-${p.id}`) ?? 0);
+                  const total = values.reduce((s, v) => s + v, 0);
                   return (
-                    <tr className="border-t border-slate-200 hover:bg-slate-50" key={n}>
-                      <td className="px-3 py-2 font-medium text-slate-700">{n}호</td>
+                    <tr className="border-t border-slate-200 hover:bg-slate-50" key={row.id}>
+                      <td className="px-3 py-2">
+                        {isBranchView ? (
+                          <button className="text-left font-medium text-slate-700 hover:underline"
+                            onClick={() => navigate({ branchId: String(row.id) })}>
+                            {row.label}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400">{row.sub}</span>
+                        )}
+                      </td>
+                      {!isBranchView && <td className="px-3 py-2">{row.label}</td>}
                       {values.map((v, i) => (
-                        <td className="px-3 py-2 text-right" key={visiblePrograms[i].id}>
-                          {v === null ? <span className="text-slate-200">—</span> : v > 0 ? v.toLocaleString() : "-"}
-                        </td>
+                        <td className="px-3 py-2 text-right" key={visiblePrograms[i].id}>{v > 0 ? v.toLocaleString() : "-"}</td>
                       ))}
                       <td className="px-3 py-2 text-right font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
                     </tr>
                   );
                 })}
               </tbody>
-              {issueNumbers.length > 0 && (
+              {rows.length > 0 && (
                 <tfoot className="bg-slate-50 font-semibold">
                   <tr>
-                    <td className="px-3 py-2">합계</td>
+                    <td className="px-3 py-2" colSpan={isBranchView ? 1 : 2}>합계</td>
                     {visiblePrograms.map((p) => {
-                      const total = issueNumbers.reduce((s, n) => s + (issueMap.get(`${p.id}-${n}`) ?? 0), 0);
-                      return <td className="px-3 py-2 text-right" key={p.id}>{total > 0 ? total.toLocaleString() : "-"}</td>;
+                      const total = rows.reduce((s, row) => s + (issueMap.get(`${row.id}-${p.id}`) ?? 0), 0);
+                      return <td className="px-3 py-2 text-right" key={p.id}>{total.toLocaleString()}</td>;
                     })}
                     <td className="px-3 py-2 text-right">
-                      {visiblePrograms.reduce((s, p) => s + issueNumbers.reduce((ss, n) => ss + (issueMap.get(`${p.id}-${n}`) ?? 0), 0), 0).toLocaleString()}
+                      {rows.reduce((s, row) => s + visiblePrograms.reduce((ss, p) => ss + (issueMap.get(`${row.id}-${p.id}`) ?? 0), 0), 0).toLocaleString()}
                     </td>
                   </tr>
                 </tfoot>

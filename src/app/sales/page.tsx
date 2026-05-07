@@ -10,6 +10,7 @@ type Params = {
   programId?: string;
   ym?: string;
   year?: string;
+  issueNum?: string;
 };
 
 export default async function SalesPage({
@@ -24,6 +25,7 @@ export default async function SalesPage({
   const programId = params.programId ? Number(params.programId) : undefined;
   const ym = params.ym ?? getCurrentYearMonth();
   const year = params.year ?? new Date().getFullYear().toString();
+  const issueNum = params.issueNum ? Number(params.issueNum) : 1;
 
   const [branches, programs, institutions] = await Promise.all([
     prisma.branch.findMany({ orderBy: { name: "asc" } }),
@@ -49,11 +51,12 @@ export default async function SalesPage({
   const issueOrders = view === "issue"
     ? await prisma.saleOrder.findMany({
         where: {
+          issueNumber: issueNum,
           orderDate: { gte: `${year}-01-01`, lte: `${year}-12-31` },
           ...(programId ? { programId } : {}),
           ...(branchId ? { institution: { branchId } } : {}),
         },
-        select: { institutionId: true, programId: true, issueNumber: true, quantity: true },
+        select: { institutionId: true, programId: true, quantity: true },
       })
     : [];
 
@@ -90,6 +93,7 @@ export default async function SalesPage({
         selectedProgramId={programId}
         selectedYm={ym}
         selectedYear={year}
+        selectedIssueNum={issueNum}
         maxIssues={maxIssues}
         canEdit={!!session}
       />
