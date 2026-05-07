@@ -14,7 +14,7 @@ type IssueOrder = { institutionId: number; issueNumber: number; quantity: number
 export function SalesViewClient({
   branches, programs, institutions, allInstitutions,
   monthlyOrders, issueOrders,
-  view, selectedBranchId, selectedProgramId, selectedYm,
+  view, selectedBranchId, selectedProgramId, selectedYm, selectedYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
   branches: Branch[];
@@ -27,6 +27,7 @@ export function SalesViewClient({
   selectedBranchId?: number;
   selectedProgramId?: number;
   selectedYm: string;
+  selectedYear: string;
   maxIssues: number;
   canEdit: boolean;
   canBulkEdit?: boolean;
@@ -36,10 +37,21 @@ export function SalesViewClient({
 
   function navigate(updates: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
-    const merged = { view, branchId: selectedBranchId?.toString(), programId: selectedProgramId?.toString(), ym: selectedYm, ...updates };
+    const merged = {
+      view,
+      branchId: selectedBranchId?.toString(),
+      programId: selectedProgramId?.toString(),
+      ym: selectedYm,
+      year: selectedYear,
+      ...updates,
+    };
     Object.entries(merged).forEach(([k, v]) => { if (v) sp.set(k, v); });
     router.push(`/sales?${sp.toString()}`);
   }
+
+  // 연도 선택 옵션 (현재 연도 기준 ±3년)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 3 + i);
 
   // institutionId → branchId 매핑
   const instBranchMap = new Map(allInstitutions.map((i) => [i.id, i.branchId]));
@@ -84,6 +96,13 @@ export function SalesViewClient({
         </select>
         {view === "monthly" && (
           <input className="w-36" type="month" value={selectedYm} onChange={(e) => navigate({ ym: e.target.value })} />
+        )}
+        {view === "issue" && (
+          <select className="w-36" value={selectedYear} onChange={(e) => navigate({ year: e.target.value })}>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}년</option>
+            ))}
+          </select>
         )}
       </div>
 
