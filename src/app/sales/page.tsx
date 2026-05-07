@@ -10,7 +10,6 @@ type Params = {
   programId?: string;
   ym?: string;
   year?: string;
-  issueNum?: string;
 };
 
 export default async function SalesPage({
@@ -25,7 +24,6 @@ export default async function SalesPage({
   const programId = params.programId ? Number(params.programId) : undefined;
   const ym = params.ym ?? getCurrentYearMonth();
   const year = params.year ?? new Date().getFullYear().toString();
-  const issueNum = params.issueNum ? Number(params.issueNum) : 1;
 
   const [branches, programs, institutions] = await Promise.all([
     prisma.branch.findMany({ orderBy: { name: "asc" } }),
@@ -48,27 +46,22 @@ export default async function SalesPage({
       })
     : [];
 
+  // 호별: 해당 연도 전체 데이터 — 클라이언트에서 셀 클릭 시 모달에 활용
   const issueOrders = view === "issue"
     ? await prisma.saleOrder.findMany({
         where: {
-          issueNumber: issueNum,
           orderDate: { gte: `${year}-01-01`, lte: `${year}-12-31` },
-          ...(programId ? { programId } : {}),
-          ...(branchId ? { institution: { branchId } } : {}),
         },
-        select: { institutionId: true, programId: true, quantity: true },
+        select: { institutionId: true, programId: true, issueNumber: true, quantity: true },
       })
     : [];
 
-  const selectedProgram = programs.find((p) => p.id === programId);
-  const maxIssues = selectedProgram?.totalIssues ?? Math.max(...programs.map((p) => p.totalIssues), 12);
+  const maxIssues = Math.max(...programs.map((p) => p.totalIssues), 12);
 
-  const allInstitutions = branchId
-    ? await prisma.institution.findMany({
-        include: { branch: { select: { name: true } } },
-        orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],
-      })
-    : institutions;
+  const allInstitutions = await prisma.institution.findMany({
+    include: { branch: { select: { name: true } } },
+    orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],
+  });
 
   const instList = institutions.map((inst) => ({
     id: inst.id, name: inst.name, branchName: inst.branch.name, branchId: inst.branchId,
@@ -93,7 +86,6 @@ export default async function SalesPage({
         selectedProgramId={programId}
         selectedYm={ym}
         selectedYear={year}
-        selectedIssueNum={issueNum}
         maxIssues={maxIssues}
         canEdit={!!session}
       />
