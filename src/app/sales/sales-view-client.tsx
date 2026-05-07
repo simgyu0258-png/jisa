@@ -268,7 +268,7 @@ export function SalesViewClient({
         }
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setIssueModalCell(null)}>
-            <div className="relative max-h-[80vh] w-full max-w-3xl overflow-auto rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="relative max-h-[80vh] w-full max-w-5xl overflow-auto rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
               <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
                 <h2 className="font-semibold text-slate-800">{branchName} — {issueNumber}호 상세</h2>
                 <button className="text-slate-400 hover:text-slate-700" onClick={() => setIssueModalCell(null)}>✕</button>
@@ -280,11 +280,11 @@ export function SalesViewClient({
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-100">
                       <tr>
-                        <th className="px-3 py-2 text-left">기관</th>
+                        <th className="px-3 py-2 text-left whitespace-nowrap">기관</th>
                         {programs.map((p) => (
-                          <th className="px-3 py-2 text-right" key={p.id}>{p.name}</th>
+                          <th className="px-3 py-2 text-right whitespace-nowrap" key={p.id}>{p.name}</th>
                         ))}
-                        <th className="px-3 py-2 text-right font-semibold">합계</th>
+                        <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">합계</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -293,7 +293,7 @@ export function SalesViewClient({
                         const total = values.reduce((s, v) => s + v, 0);
                         return (
                           <tr className="border-t border-slate-200" key={inst.id}>
-                            <td className="px-3 py-2">{inst.name}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{inst.name}</td>
                             {values.map((v, i) => (
                               <td className="px-3 py-2 text-right" key={programs[i].id}>{v > 0 ? v.toLocaleString() : "-"}</td>
                             ))}
