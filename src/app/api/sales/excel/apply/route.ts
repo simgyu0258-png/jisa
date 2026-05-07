@@ -1,3 +1,58 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-export async function GET() { return NextResponse.json({ message: "준비 중" }); }
-export async function POST() { return NextResponse.json({ message: "준비 중" }); }
+import { prisma } from "@/lib/prisma";
+import type { SaleOrderPreviewRow } from "../preview/route";
+
+export async function POST(request: Request) {
+  const body = (await request.json()) as { payload?: SaleOrderPreviewRow[] };
+  const payload = body.payload;
+  if (!Array.isArray(payload) || payload.length === 0) {
+    return NextResponse.json({ error: "잘못된 payload" }, { status: 400 });
+  }
+
+  // 신규 기관 먼저 생성 (institutionId가 음수인 것들)
+  const newInstMap = new Map<string, number>(); // "branchId::name" → 실제 id
+
+  for (const row of payload) {
+    if (row.isNewInstitution) {
+      const key = `${row.branchId}::${row.institutionName}`;
+      if (!newInstMap.has(key)) {
+        const existing = await prisma.institution.findFirst({
+          where: { branchId: row.branchId, name: row.institutionName },
+        });
+        if (existing) {
+          newInstMap.set(key, existing.id);
+        } else {
+          const created = await prisma.institution.create({
+            data: { branchId: row.branchId, name: row.institutionName },
+          });
+          newInstMap.set(key, created.id);
+        }
+      }
+    }
+  }
+
+  // SaleOrder upsert
+  let upsertedCount = 0;
+  for (const row of payload) {
+    const institutionId = row.isNewInstitution
+      ? newInstMap.get(`${row.branchId}::${row.institutionName}`)!
+      : row.institutionId;
+
+    await prisma.saleOrder.upsert({
+      where: {
+        institutionId_programId_issueNumber: {
+          institutionId,
+          programId: row.programId,
+          issueNumber: row.issueNumber,
+        },
+      },
+      create: { institutionId, programId: row.programId, issueNumber: row.issueNumber, orderDate: row.orderDate, quantity: row.quantity },
+      update: { orderDate: row.orderDate, quantity: row.quantity },
+    });
+    upsertedCount++;
+  }
+
+  return NextResponse.json({ upsertedCount });
+}

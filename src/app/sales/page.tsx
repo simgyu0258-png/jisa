@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { getCurrentYearMonth } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
 import { SalesViewClient } from "./sales-view-client";
+import { SalesBulkUpload } from "./sales-bulk-upload";
 
 type Params = {
   view?: string;
@@ -81,7 +82,8 @@ export default async function SalesPage({
   }));
 
   return (
-    <SalesViewClient
+    <div className="space-y-6">
+      <SalesViewClient
       branches={branches}
       programs={programs}
       institutions={instList}
@@ -95,5 +97,7 @@ export default async function SalesPage({
       maxIssues={maxIssues}
       canEdit={!!session}
     />
+    {!!session && <SalesBulkUpload />}
+    </div>
   );
 }
