@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
@@ -130,6 +130,24 @@ function ChartCard({
   onUpdate: (u: Partial<CardConfig>) => void;
   onRemove: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadImage() {
+    if (!cardRef.current) return;
+    setDownloading(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(cardRef.current, { backgroundColor: "#ffffff", scale: 2 });
+      const link = document.createElement("a");
+      link.download = `chart-${config.year}-${config.basis}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   // 필터 변경 시 항상 configured: true 로 설정
   function handleUpdate(updates: Partial<CardConfig>) {
     onUpdate({ ...updates, configured: true });
@@ -155,7 +173,7 @@ function ChartCard({
   const hasData = data.some((pt) => lineKeys.some((k) => (pt[k] as number) > 0));
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
+    <div className="rounded-lg border border-slate-200 bg-white" ref={cardRef}>
       <div className="space-y-2 border-b border-slate-100 px-4 py-3">
         {/* 필터 행 */}
         <div className="flex flex-wrap items-center gap-2">
@@ -174,7 +192,15 @@ function ChartCard({
             <option value="">전체 지사</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-          <button className="ml-auto text-slate-400 hover:text-slate-700" onClick={onRemove}>✕</button>
+          <button
+            className="ml-auto text-xs text-slate-400 hover:text-slate-700 disabled:opacity-40"
+            disabled={downloading || config.configured === false}
+            onClick={downloadImage}
+            title="이미지 저장"
+          >
+            {downloading ? "저장 중..." : "이미지 저장"}
+          </button>
+          <button className="text-slate-400 hover:text-slate-700" onClick={onRemove}>✕</button>
         </div>
         {/* 프로그램 선택 */}
         <div className="flex flex-wrap gap-x-3 gap-y-1">
