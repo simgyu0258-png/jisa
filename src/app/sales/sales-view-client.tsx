@@ -9,13 +9,15 @@ type Program = { id: number; name: string; totalIssues: number };
 type Institution = { id: number; name: string; branchName: string; branchId: number };
 type MonthlyOrder = { institutionId: number; programId: number; orderDate: string; quantity: number };
 type IssueOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
+type SalesTarget = { branchId: number; programId: number; quantity: number };
+type TargetActualOrder = { institutionId: number; programId: number; quantity: number };
 
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
 type IssueModalCell = { branchId: number; branchName: string; issueNumber: number };
 
 export function SalesViewClient({
   branches, programs, allInstitutions,
-  monthlyOrders, issueOrders,
+  monthlyOrders, issueOrders, salesTargets, targetActualOrders,
   view, selectedBranchId, selectedYear, minYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
@@ -24,7 +26,9 @@ export function SalesViewClient({
   allInstitutions: Institution[];
   monthlyOrders: MonthlyOrder[];
   issueOrders: IssueOrder[];
-  view: "monthly" | "issue";
+  salesTargets: SalesTarget[];
+  targetActualOrders: TargetActualOrder[];
+  view: "monthly" | "issue" | "target";
   selectedBranchId?: number;
   selectedYear: string;
   minYear: number;
@@ -256,6 +260,10 @@ export function SalesViewClient({
             className={`px-4 py-2 text-sm font-medium border-l border-slate-200 ${view === "issue" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
             onClick={() => navigate({ view: "issue" })}
           >호별 현황</button>
+          <button
+            className={`px-4 py-2 text-sm font-medium border-l border-slate-200 ${view === "target" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => navigate({ view: "target" })}
+          >목표 현황</button>
         </div>
         {canEdit && (
           <div className="flex items-center gap-2">
@@ -296,6 +304,76 @@ export function SalesViewClient({
           onCellClick={(branch, n) => setIssueModal({ branchId: branch.id, branchName: branch.name, issueNumber: Number(n) })}
         />
       )}
+
+      {/* 목표 현황: 행=지사, 열=프로그램, 셀=실적/목표/달성률 */}
+      {view === "target" && (() => {
+        // 집계
+        const targetMap = new Map<string, number>();
+        for (const t of salesTargets) {
+          targetMap.set(`${t.branchId}-${t.programId}`, t.quantity);
+        }
+        const actualMap = new Map<string, number>();
+        for (const o of targetActualOrders) {
+          const bid = instBranchMap.get(o.institutionId);
+          if (!bid) continue;
+          const key = `${bid}-${o.programId}`;
+          actualMap.set(key, (actualMap.get(key) ?? 0) + o.quantity);
+        }
+
+        function rateColor(rate: number | null) {
+          if (rate === null) return "text-slate-400";
+          if (rate >= 100) return "text-emerald-600";
+          if (rate >= 50) return "text-amber-500";
+          return "text-rose-600";
+        }
+
+        return (
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="px-3 py-2 text-left">지사</th>
+                  {programs.map((p) => (
+                    <th className="px-3 py-2 text-center whitespace-nowrap" key={p.id}>{p.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleBranches.length === 0 && (
+                  <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={programs.length + 1}>데이터가 없습니다.</td></tr>
+                )}
+                {visibleBranches.map((branch) => (
+                  <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
+                    <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
+                    {programs.map((p) => {
+                      const key = `${branch.id}-${p.id}`;
+                      const actual = actualMap.get(key) ?? 0;
+                      const target = targetMap.get(key) ?? 0;
+                      const rate = target > 0 ? (actual / target) * 100 : null;
+                      return (
+                        <td className="px-3 py-2 text-center" key={p.id}>
+                          {target === 0 ? (
+                            <span className="text-slate-400">-</span>
+                          ) : (
+                            <>
+                              <div className={`font-semibold ${rateColor(rate)}`}>
+                                {rate !== null ? `${rate.toFixed(1)}%` : "-"}
+                              </div>
+                              <div className="text-xs text-slate-400 mt-0.5">
+                                {actual.toLocaleString()} / {target.toLocaleString()}
+                              </div>
+                            </>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {/* 월별 상세 모달 */}
       {monthlyModal && (
