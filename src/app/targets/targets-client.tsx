@@ -10,7 +10,7 @@ type Program = { id: number; name: string };
 
 export function TargetsClient({
   branches, programs, year, minYear,
-  initialTargets, prevTargetMap,
+  initialTargets, prevTargetMap, enabledKeys,
 }: {
   branches: Branch[];
   programs: Program[];
@@ -18,9 +18,11 @@ export function TargetsClient({
   minYear: number;
   initialTargets: Record<string, number>;
   prevTargetMap: Record<string, number>;
+  enabledKeys: string[];
 }) {
   const router = useRouter();
   const [targets, setTargets] = useState<Record<string, number>>(initialTargets);
+  const enabledSet = new Set(enabledKeys);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [selectedYear, setSelectedYear] = useState(year);
@@ -107,23 +109,30 @@ export function TargetsClient({
                   <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
                   {programs.map((p) => {
                     const key = `${branch.id}-${p.id}`;
+                    const enabled = enabledSet.has(key);
                     const current = targets[key] ?? 0;
                     const prev = prevTargetMap[key];
                     const hasPrev = prev !== undefined && prev > 0;
                     const diff = hasPrev ? current - prev : null;
                     return (
-                      <td className="px-2 py-1" key={p.id}>
-                        <input
-                          className="w-full text-center text-sm"
-                          min={0}
-                          type="number"
-                          value={current}
-                          onChange={(e) => update(branch.id, p.id, e.target.value)}
-                        />
-                        {diff !== null && (
-                          <div className={`mt-0.5 text-center text-xs ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-500" : "text-slate-400"}`}>
-                            {diff > 0 ? `▲ ${diff.toLocaleString()}` : diff < 0 ? `▼ ${Math.abs(diff).toLocaleString()}` : "= 전년동일"}
-                          </div>
+                      <td className={`px-2 py-1 ${!enabled ? "bg-slate-50" : ""}`} key={p.id}>
+                        {enabled ? (
+                          <>
+                            <input
+                              className="w-full text-center text-sm"
+                              min={0}
+                              type="number"
+                              value={current}
+                              onChange={(e) => update(branch.id, p.id, e.target.value)}
+                            />
+                            {diff !== null && (
+                              <div className={`mt-0.5 text-center text-xs ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-500" : "text-slate-400"}`}>
+                                {diff > 0 ? `▲ ${diff.toLocaleString()}` : diff < 0 ? `▼ ${Math.abs(diff).toLocaleString()}` : "= 전년동일"}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center text-slate-300">—</div>
                         )}
                       </td>
                     );

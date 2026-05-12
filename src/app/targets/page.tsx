@@ -16,12 +16,13 @@ export default async function TargetsPage({
   const currentYear = new Date().getFullYear();
   const year = params.year ? Number(params.year) : currentYear;
 
-  const [branches, programs, targets, prevTargets, oldestOrder] = await Promise.all([
+  const [branches, programs, targets, prevTargets, oldestOrder, permissions] = await Promise.all([
     prisma.branch.findMany({ where: { status: "active" }, orderBy: { name: "asc" } }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
     prisma.salesTarget.findMany({ where: { year } }),
     prisma.salesTarget.findMany({ where: { year: year - 1 } }),
     prisma.saleOrder.findFirst({ orderBy: { orderDate: "asc" }, select: { orderDate: true } }),
+    prisma.branchProgramPermission.findMany({ where: { isEnabled: true }, select: { branchId: true, programId: true } }),
   ]);
 
   const minYear = oldestOrder
@@ -38,6 +39,8 @@ export default async function TargetsPage({
     prevTargetMap[`${t.branchId}-${t.programId}`] = t.quantity;
   }
 
+  const enabledKeys = permissions.map((p) => `${p.branchId}-${p.programId}`);
+
   return (
     <TargetsClient
       key={year}
@@ -47,6 +50,7 @@ export default async function TargetsPage({
       minYear={minYear}
       initialTargets={initialTargets}
       prevTargetMap={prevTargetMap}
+      enabledKeys={enabledKeys}
     />
   );
 }
