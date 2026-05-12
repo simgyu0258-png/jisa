@@ -208,7 +208,7 @@ export default async function HomePage() {
           </div>
         </article>
       </section>
-      <DashboardCharts monthlyLine={monthlyLine} programBars={programBars} issueBars={issueBars} />
+      <DashboardCharts monthlyLine={monthlyLine} programBars={programBars} issueBars={issueBars} currentMonth={currentMonth} />
     </div>
   );
 }

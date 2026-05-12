@@ -20,10 +20,12 @@ export function DashboardCharts({
   programBars,
   monthlyLine,
   issueBars,
+  currentMonth,
 }: {
   programBars: ProgramBar[];
   monthlyLine: MonthlyLine[];
   issueBars: IssueBar[];
+  currentMonth: string;
 }) {
   const maxQuantity = Math.max(...monthlyLine.map((d) => d.quantity), 0);
   const maxTick = Math.ceil(maxQuantity / 500) * 500 || 500;
@@ -32,7 +34,7 @@ export function DashboardCharts({
   return (
     <div className="grid grid-cols-1 gap-4">
       <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-800">프로그램별 판매 부수</h3>
+        <h3 className="mb-3 text-sm font-semibold text-slate-800">{Number(currentMonth.split("-")[1])}월 프로그램별 판매 부수</h3>
         <ResponsiveContainer width="100%" height={288}>
           <BarChart data={programBars} barCategoryGap="33%">
             <CartesianGrid strokeDasharray="3 3" />
