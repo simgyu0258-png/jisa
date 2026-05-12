@@ -336,39 +336,59 @@ export function SalesViewClient({
                   {programs.map((p) => (
                     <th className="px-3 py-2 text-center whitespace-nowrap" key={p.id}>{p.name}</th>
                   ))}
+                  <th className="px-3 py-2 text-center font-semibold whitespace-nowrap">합계</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleBranches.length === 0 && (
                   <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={programs.length + 1}>데이터가 없습니다.</td></tr>
                 )}
-                {visibleBranches.map((branch) => (
-                  <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
-                    <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
-                    {programs.map((p) => {
-                      const key = `${branch.id}-${p.id}`;
-                      const actual = actualMap.get(key) ?? 0;
-                      const target = targetMap.get(key) ?? 0;
-                      const rate = target > 0 ? (actual / target) * 100 : null;
-                      return (
-                        <td className="px-3 py-2 text-center" key={p.id}>
-                          {target === 0 ? (
-                            <span className="text-slate-400">-</span>
-                          ) : (
-                            <>
-                              <div className={`font-semibold ${rateColor(rate)}`}>
-                                {rate !== null ? `${rate.toFixed(1)}%` : "-"}
-                              </div>
-                              <div className="text-xs text-slate-400 mt-0.5">
-                                {actual.toLocaleString()} / {target.toLocaleString()}
-                              </div>
-                            </>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {visibleBranches.map((branch) => {
+                  const totalActual = programs.reduce((s, p) => s + (actualMap.get(`${branch.id}-${p.id}`) ?? 0), 0);
+                  const totalTarget = programs.reduce((s, p) => s + (targetMap.get(`${branch.id}-${p.id}`) ?? 0), 0);
+                  const totalRate = totalTarget > 0 ? (totalActual / totalTarget) * 100 : null;
+                  return (
+                    <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
+                      <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
+                      {programs.map((p) => {
+                        const key = `${branch.id}-${p.id}`;
+                        const actual = actualMap.get(key) ?? 0;
+                        const target = targetMap.get(key) ?? 0;
+                        const rate = target > 0 ? (actual / target) * 100 : null;
+                        return (
+                          <td className="px-3 py-2 text-center" key={p.id}>
+                            {target === 0 ? (
+                              <span className="text-slate-400">-</span>
+                            ) : (
+                              <>
+                                <div className={`font-semibold ${rateColor(rate)}`}>
+                                  {rate !== null ? `${rate.toFixed(1)}%` : "-"}
+                                </div>
+                                <div className="text-xs text-slate-400 mt-0.5">
+                                  {actual.toLocaleString()} / {target.toLocaleString()}
+                                </div>
+                              </>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-2 text-center border-l border-slate-200">
+                        {totalTarget === 0 ? (
+                          <span className="text-slate-400">-</span>
+                        ) : (
+                          <>
+                            <div className={`font-semibold ${rateColor(totalRate)}`}>
+                              {totalRate !== null ? `${totalRate.toFixed(1)}%` : "-"}
+                            </div>
+                            <div className="text-xs text-slate-400 mt-0.5">
+                              {totalActual.toLocaleString()} / {totalTarget.toLocaleString()}
+                            </div>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
