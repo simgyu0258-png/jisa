@@ -11,13 +11,14 @@ type MonthlyOrder = { institutionId: number; programId: number; orderDate: strin
 type IssueOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
 type SalesTarget = { branchId: number; programId: number; quantity: number };
 type TargetActualOrder = { institutionId: number; programId: number; quantity: number };
+type TargetPermission = { branchId: number; programId: number };
 
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
 type IssueModalCell = { branchId: number; branchName: string; issueNumber: number };
 
 export function SalesViewClient({
   branches, programs, allInstitutions,
-  monthlyOrders, issueOrders, salesTargets, targetActualOrders,
+  monthlyOrders, issueOrders, salesTargets, targetActualOrders, targetPermissions,
   view, selectedBranchId, selectedYear, minYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
@@ -28,6 +29,7 @@ export function SalesViewClient({
   issueOrders: IssueOrder[];
   salesTargets: SalesTarget[];
   targetActualOrders: TargetActualOrder[];
+  targetPermissions: TargetPermission[];
   view: "monthly" | "issue" | "target";
   selectedBranchId?: number;
   selectedYear: string;
@@ -307,10 +309,12 @@ export function SalesViewClient({
 
       {/* 목표 현황: 행=지사, 열=프로그램, 셀=실적/목표/달성률 */}
       {view === "target" && (() => {
-        // 집계
+        // 집계 (권한 없는 프로그램은 목표 0으로 처리)
+        const permSet = new Set(targetPermissions.map((p) => `${p.branchId}-${p.programId}`));
         const targetMap = new Map<string, number>();
         for (const t of salesTargets) {
-          targetMap.set(`${t.branchId}-${t.programId}`, t.quantity);
+          const key = `${t.branchId}-${t.programId}`;
+          targetMap.set(key, permSet.has(key) ? t.quantity : 0);
         }
         const actualMap = new Map<string, number>();
         for (const o of targetActualOrders) {

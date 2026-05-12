@@ -57,6 +57,13 @@ export default async function SalesPage({
       })
     : [];
 
+  const targetPermissions = view === "target"
+    ? await prisma.branchProgramPermission.findMany({
+        where: { isEnabled: true },
+        select: { branchId: true, programId: true },
+      })
+    : [];
+
   const maxIssues = Math.max(...programs.map((p) => p.totalIssues), 12);
 
   const allInstList = allInstitutions.map((inst) => ({
@@ -74,6 +81,7 @@ export default async function SalesPage({
         issueOrders={issueOrders}
         salesTargets={salesTargets}
         targetActualOrders={targetActualOrders}
+        targetPermissions={targetPermissions}
         view={view}
         selectedBranchId={branchId}
         selectedYear={year}
