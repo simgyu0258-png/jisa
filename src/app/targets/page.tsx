@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentFiscalYear, getFiscalYearFromDate } from "@/lib/month";
 import { TargetsClient } from "./targets-client";
 
 type Params = { year?: string };
@@ -13,7 +14,7 @@ export default async function TargetsPage({
   const [session, params] = await Promise.all([auth(), searchParams]);
   if (!session || (session.user as { role?: string }).role !== "master") redirect("/");
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = getCurrentFiscalYear();
   const year = params.year ? Number(params.year) : currentYear;
 
   const [branches, programs, targets, prevTargets, oldestOrder, permissions] = await Promise.all([
@@ -26,7 +27,7 @@ export default async function TargetsPage({
   ]);
 
   const minYear = oldestOrder
-    ? Math.min(Number(oldestOrder.orderDate.slice(0, 4)), currentYear)
+    ? Math.min(getFiscalYearFromDate(oldestOrder.orderDate), currentYear)
     : currentYear;
 
   const initialTargets: Record<string, number> = {};

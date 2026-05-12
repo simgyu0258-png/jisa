@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getCurrentFiscalYear, getFiscalYearFromDate } from "@/lib/month";
 import { AnalyticsClient } from "./analytics-client";
 
 export default async function AnalyticsPage() {
@@ -12,8 +13,8 @@ export default async function AnalyticsPage() {
     prisma.saleOrder.findFirst({ orderBy: { orderDate: "asc" }, select: { orderDate: true } }),
   ]);
 
-  const currentYear = new Date().getFullYear();
-  const minYear = oldestOrder ? Number(oldestOrder.orderDate.slice(0, 4)) : currentYear;
+  const currentYear = getCurrentFiscalYear();
+  const minYear = oldestOrder ? getFiscalYearFromDate(oldestOrder.orderDate) : currentYear;
 
   const instBranchMap = new Map(institutions.map((i) => [i.id, i.branchId]));
 
@@ -35,7 +36,7 @@ export default async function AnalyticsPage() {
   for (const o of saleOrders) {
     const bid = instBranchMap.get(o.institutionId);
     if (!bid) continue;
-    const k = `${bid}|${o.programId}|${o.issueNumber}|${o.orderDate.slice(0, 4)}`;
+    const k = `${bid}|${o.programId}|${o.issueNumber}|${getFiscalYearFromDate(o.orderDate)}`;
     iMap.set(k, (iMap.get(k) ?? 0) + o.quantity);
   }
   const issueAgg = [...iMap.entries()].map(([k, qty]) => {

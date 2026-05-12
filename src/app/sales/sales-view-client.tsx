@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OrderModal } from "./order-modal";
+import { getFiscalMonths } from "@/lib/month";
 
 type Branch = { id: number; name: string };
 type Program = { id: number; name: string; totalIssues: number };
@@ -19,7 +20,7 @@ type IssueModalCell = { branchId: number; branchName: string; issueNumber: numbe
 export function SalesViewClient({
   branches, programs, allInstitutions,
   monthlyOrders, issueOrders, salesTargets, targetActualOrders, targetPermissions,
-  view, selectedBranchId, selectedYear, minYear,
+  view, selectedBranchId, selectedYear, minYear, fiscalYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
   branches: Branch[];
@@ -34,6 +35,7 @@ export function SalesViewClient({
   selectedBranchId?: number;
   selectedYear: string;
   minYear: number;
+  fiscalYear: number;
   maxIssues: number;
   canEdit: boolean;
   canBulkEdit?: boolean;
@@ -55,13 +57,9 @@ export function SalesViewClient({
     router.push(`/sales?${sp.toString()}`);
   }
 
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: currentYear - minYear + 1 }, (_, i) => minYear + i);
+  const yearOptions = Array.from({ length: fiscalYear - minYear + 1 }, (_, i) => minYear + i);
   const issueNumbers = Array.from({ length: maxIssues }, (_, i) => i + 1);
-  const months = Array.from({ length: 12 }, (_, i) => ({
-    label: `${i + 1}월`,
-    ym: `${selectedYear}-${String(i + 1).padStart(2, "0")}`,
-  }));
+  const months = getFiscalMonths(Number(selectedYear));
 
   // institutionId → branchId 매핑
   const instBranchMap = new Map(allInstitutions.map((i) => [i.id, i.branchId]));

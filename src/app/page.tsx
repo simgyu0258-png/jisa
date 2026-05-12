@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { DashboardCharts } from "@/components/dashboard-charts";
-import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths } from "@/lib/month";
+import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange } from "@/lib/month";
 import { prisma } from "@/lib/prisma";
 
 function percentChange(current: number, previous: number) {
@@ -15,7 +15,8 @@ export default async function HomePage() {
   const sameMonthLastYear = getSameMonthLastYear(currentMonth);
   const recentMonths = getRecentMonths(12);
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = getCurrentFiscalYear();
+  const { gte: fyGte, lt: fyLt } = getFiscalYearRange(currentYear);
 
   const [programs, currentByProgram, currentTotal, previousTotal, lastYearTotal, allRecent, byIssue,
     yearTargets, yearOrders, branches, activePermissions] =
@@ -49,7 +50,7 @@ export default async function HomePage() {
       }),
       prisma.salesTarget.findMany({ where: { year: currentYear } }),
       prisma.saleOrder.findMany({
-        where: { orderDate: { gte: `${currentYear}-01-01`, lte: `${currentYear}-12-31` } },
+        where: { orderDate: { gte: fyGte, lt: fyLt } },
         select: { quantity: true, institution: { select: { branchId: true } } },
       }),
       prisma.branch.findMany({ select: { id: true, name: true } }),

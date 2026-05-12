@@ -5,6 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
+import { getFiscalMonths } from "@/lib/month";
 
 type Branch = { id: number; name: string };
 type Program = { id: number; name: string; totalIssues: number };
@@ -22,7 +23,13 @@ type CardConfig = {
 
 const LINE_COLORS = ["#2563eb", "#16a34a", "#dc2626", "#9333ea", "#ea580c", "#0891b2", "#ca8a04", "#db2777"];
 const LS_KEY = "jisa-analytics-v1";
-const THIS_YEAR = String(new Date().getFullYear());
+
+function getCurrentFiscalYear() {
+  const now = new Date();
+  const m = now.getMonth() + 1;
+  return m >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+}
+const THIS_YEAR = String(getCurrentFiscalYear());
 
 function newCard(): CardConfig {
   return { id: crypto.randomUUID(), year: THIS_YEAR, basis: "monthly", branchId: null, programIds: [], configured: false };
@@ -265,10 +272,7 @@ function computeChartData(
   issueAgg: IssueAgg[],
 ): { data: Record<string, string | number>[]; lineKeys: string[] } {
   if (config.basis === "monthly") {
-    const xPoints = Array.from({ length: 12 }, (_, i) => ({
-      ym: `${config.year}-${String(i + 1).padStart(2, "0")}`,
-      label: `${i + 1}월`,
-    }));
+    const xPoints = getFiscalMonths(Number(config.year)).map(({ ym, label }) => ({ ym, label }));
 
     // 전체/특정 지사 모두 선 = 프로그램별
     const filtered = config.branchId === null

@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentFiscalYear, getFiscalYearRange, getFiscalYearFromDate } from "@/lib/month";
 import { SalesViewClient } from "./sales-view-client";
 
 type Params = {
@@ -17,7 +18,7 @@ export default async function SalesPage({
 
   const view = params.view === "issue" ? "issue" : params.view === "target" ? "target" : "monthly";
   const branchId = params.branchId ? Number(params.branchId) : undefined;
-  const year = params.year ?? new Date().getFullYear().toString();
+  const year = params.year ?? String(getCurrentFiscalYear());
 
   const [branches, programs, allInstitutions, oldestOrder] = await Promise.all([
     prisma.branch.findMany({ orderBy: { name: "asc" } }),
@@ -29,19 +30,20 @@ export default async function SalesPage({
     prisma.saleOrder.findFirst({ orderBy: { orderDate: "asc" }, select: { orderDate: true } }),
   ]);
 
-  const currentYear = new Date().getFullYear();
-  const minYear = oldestOrder ? Number(oldestOrder.orderDate.slice(0, 4)) : currentYear;
+  const fiscalYear = getCurrentFiscalYear();
+  const minYear = oldestOrder ? getFiscalYearFromDate(oldestOrder.orderDate) : fiscalYear;
+  const { gte, lt } = getFiscalYearRange(Number(year));
 
   const monthlyOrders = view === "monthly"
     ? await prisma.saleOrder.findMany({
-        where: { orderDate: { gte: `${year}-01-01`, lte: `${year}-12-31` } },
+        where: { orderDate: { gte, lt } },
         select: { institutionId: true, programId: true, orderDate: true, quantity: true },
       })
     : [];
 
   const issueOrders = view === "issue"
     ? await prisma.saleOrder.findMany({
-        where: { orderDate: { gte: `${year}-01-01`, lte: `${year}-12-31` } },
+        where: { orderDate: { gte, lt } },
         select: { institutionId: true, programId: true, issueNumber: true, quantity: true },
       })
     : [];
@@ -52,7 +54,7 @@ export default async function SalesPage({
 
   const targetActualOrders = view === "target"
     ? await prisma.saleOrder.findMany({
-        where: { orderDate: { gte: `${year}-01-01`, lte: `${year}-12-31` } },
+        where: { orderDate: { gte, lt } },
         select: { institutionId: true, programId: true, quantity: true },
       })
     : [];
@@ -86,6 +88,7 @@ export default async function SalesPage({
         selectedBranchId={branchId}
         selectedYear={year}
         minYear={minYear}
+        fiscalYear={fiscalYear}
         maxIssues={maxIssues}
         canEdit={!!session}
       />
