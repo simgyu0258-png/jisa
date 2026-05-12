@@ -17,6 +17,7 @@ type CardConfig = {
   basis: "monthly" | "issue";
   branchId: number | null; // null = 전체 지사
   programIds: number[];    // [] = 전체 프로그램
+  configured?: boolean;    // false = 새 카드 (빈칸 상태)
 };
 
 const LINE_COLORS = ["#2563eb", "#16a34a", "#dc2626", "#9333ea", "#ea580c", "#0891b2", "#ca8a04", "#db2777"];
@@ -25,7 +26,7 @@ const THIS_YEAR = String(new Date().getFullYear());
 const YEAR_OPTIONS = Array.from({ length: 7 }, (_, i) => String(new Date().getFullYear() - 3 + i));
 
 function newCard(): CardConfig {
-  return { id: crypto.randomUUID(), year: THIS_YEAR, basis: "monthly", branchId: null, programIds: [] };
+  return { id: crypto.randomUUID(), year: THIS_YEAR, basis: "monthly", branchId: null, programIds: [], configured: false };
 }
 
 export function AnalyticsClient({
@@ -95,6 +96,27 @@ export function AnalyticsClient({
   );
 }
 
+function SortedTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: { name: string; value: number; color: string }[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const sorted = [...payload].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs shadow-lg">
+      <p className="mb-1.5 font-medium text-slate-700">{label}</p>
+      {sorted.map((entry) => (
+        <div key={entry.name} className="flex items-center gap-2 py-0.5">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: entry.color }} />
+          <span className="text-slate-600">{entry.name}</span>
+          <span className="ml-4 font-medium text-slate-800">{(entry.value ?? 0).toLocaleString()}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ChartCard({
   config, branches, programs, monthlyAgg, issueAgg, onUpdate, onRemove,
 }: {
@@ -106,15 +128,20 @@ function ChartCard({
   onUpdate: (u: Partial<CardConfig>) => void;
   onRemove: () => void;
 }) {
+  // 필터 변경 시 항상 configured: true 로 설정
+  function handleUpdate(updates: Partial<CardConfig>) {
+    onUpdate({ ...updates, configured: true });
+  }
+
   function toggleProgram(pid: number) {
     if (config.programIds.length === 0) {
-      onUpdate({ programIds: programs.map((p) => p.id).filter((id) => id !== pid) });
+      handleUpdate({ programIds: programs.map((p) => p.id).filter((id) => id !== pid) });
     } else if (config.programIds.includes(pid)) {
       const next = config.programIds.filter((id) => id !== pid);
-      onUpdate({ programIds: next });
+      handleUpdate({ programIds: next });
     } else {
       const next = [...config.programIds, pid];
-      onUpdate({ programIds: next.length === programs.length ? [] : next });
+      handleUpdate({ programIds: next.length === programs.length ? [] : next });
     }
   }
 
@@ -130,17 +157,17 @@ function ChartCard({
       <div className="space-y-2 border-b border-slate-100 px-4 py-3">
         {/* 필터 행 */}
         <div className="flex flex-wrap items-center gap-2">
-          <select className="text-sm" value={config.year} onChange={(e) => onUpdate({ year: e.target.value })}>
+          <select className="text-sm" value={config.year} onChange={(e) => handleUpdate({ year: e.target.value })}>
             {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}년</option>)}
           </select>
-          <select className="text-sm" value={config.basis} onChange={(e) => onUpdate({ basis: e.target.value as CardConfig["basis"] })}>
+          <select className="text-sm" value={config.basis} onChange={(e) => handleUpdate({ basis: e.target.value as CardConfig["basis"] })}>
             <option value="monthly">월별</option>
             <option value="issue">호별</option>
           </select>
           <select
             className="text-sm"
             value={config.branchId ?? ""}
-            onChange={(e) => onUpdate({ branchId: e.target.value ? Number(e.target.value) : null })}
+            onChange={(e) => handleUpdate({ branchId: e.target.value ? Number(e.target.value) : null })}
           >
             <option value="">전체 지사</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -150,7 +177,7 @@ function ChartCard({
         {/* 프로그램 선택 */}
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           <label className="flex cursor-pointer items-center gap-1 text-xs">
-            <input type="checkbox" checked={config.programIds.length === 0} onChange={() => onUpdate({ programIds: [] })} />
+            <input type="checkbox" checked={config.programIds.length === 0} onChange={() => handleUpdate({ programIds: [] })} />
             전체
           </label>
           {programs.map((p) => (
@@ -168,7 +195,11 @@ function ChartCard({
 
       {/* 차트 */}
       <div className="p-4">
-        {!hasData ? (
+        {config.configured === false ? (
+          <div className="flex h-52 items-center justify-center text-sm text-slate-400">
+            필터를 선택하면 차트가 표시됩니다.
+          </div>
+        ) : !hasData ? (
           <div className="flex h-52 items-center justify-center text-sm text-slate-400">데이터가 없습니다.</div>
         ) : (
           <ResponsiveContainer width="100%" height={240}>
@@ -176,7 +207,7 @@ function ChartCard({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} width={40} />
-              <Tooltip />
+              <Tooltip content={<SortedTooltip />} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               {lineKeys.map((key, i) => (
                 <Line
