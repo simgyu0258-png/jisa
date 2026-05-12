@@ -16,10 +16,11 @@ export default async function TargetsPage({
   const currentYear = new Date().getFullYear();
   const year = params.year ? Number(params.year) : currentYear;
 
-  const [branches, programs, targets, oldestOrder] = await Promise.all([
+  const [branches, programs, targets, prevTargets, oldestOrder] = await Promise.all([
     prisma.branch.findMany({ where: { status: "active" }, orderBy: { name: "asc" } }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
     prisma.salesTarget.findMany({ where: { year } }),
+    prisma.salesTarget.findMany({ where: { year: year - 1 } }),
     prisma.saleOrder.findFirst({ orderBy: { orderDate: "asc" }, select: { orderDate: true } }),
   ]);
 
@@ -32,6 +33,11 @@ export default async function TargetsPage({
     initialTargets[`${t.branchId}-${t.programId}`] = t.quantity;
   }
 
+  const prevTargetMap: Record<string, number> = {};
+  for (const t of prevTargets) {
+    prevTargetMap[`${t.branchId}-${t.programId}`] = t.quantity;
+  }
+
   return (
     <TargetsClient
       branches={branches}
@@ -39,6 +45,7 @@ export default async function TargetsPage({
       year={year}
       minYear={minYear}
       initialTargets={initialTargets}
+      prevTargetMap={prevTargetMap}
     />
   );
 }

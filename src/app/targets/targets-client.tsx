@@ -10,13 +10,14 @@ type Program = { id: number; name: string };
 
 export function TargetsClient({
   branches, programs, year, minYear,
-  initialTargets,
+  initialTargets, prevTargetMap,
 }: {
   branches: Branch[];
   programs: Program[];
   year: number;
   minYear: number;
-  initialTargets: Record<string, number>; // `${branchId}-${programId}` → quantity
+  initialTargets: Record<string, number>;
+  prevTargetMap: Record<string, number>;
 }) {
   const router = useRouter();
   const [targets, setTargets] = useState<Record<string, number>>(initialTargets);
@@ -97,17 +98,29 @@ export function TargetsClient({
               return (
                 <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
                   <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
-                  {programs.map((p) => (
-                    <td className="px-2 py-1" key={p.id}>
-                      <input
-                        className="w-full text-center text-sm"
-                        min={0}
-                        type="number"
-                        value={targets[`${branch.id}-${p.id}`] ?? 0}
-                        onChange={(e) => update(branch.id, p.id, e.target.value)}
-                      />
-                    </td>
-                  ))}
+                  {programs.map((p) => {
+                    const key = `${branch.id}-${p.id}`;
+                    const current = targets[key] ?? 0;
+                    const prev = prevTargetMap[key];
+                    const hasPrev = prev !== undefined && prev > 0;
+                    const diff = hasPrev ? current - prev : null;
+                    return (
+                      <td className="px-2 py-1" key={p.id}>
+                        <input
+                          className="w-full text-center text-sm"
+                          min={0}
+                          type="number"
+                          value={current}
+                          onChange={(e) => update(branch.id, p.id, e.target.value)}
+                        />
+                        {diff !== null && (
+                          <div className={`mt-0.5 text-center text-xs ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-500" : "text-slate-400"}`}>
+                            {diff > 0 ? `▲ ${diff.toLocaleString()}` : diff < 0 ? `▼ ${Math.abs(diff).toLocaleString()}` : "= 전년동일"}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
                   <td className="px-2 py-2 text-center font-semibold">{total.toLocaleString()}</td>
                 </tr>
               );
