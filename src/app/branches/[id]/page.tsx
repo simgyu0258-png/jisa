@@ -2,13 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { updateBranchInfoAction, updatePermissionsAction } from "./actions";
+import { SavedToast } from "@/components/saved-toast";
 
 export default async function BranchDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { saved }] = await Promise.all([params, searchParams]);
   const branchId = Number.parseInt(id, 10);
 
   const [branch, programs] = await Promise.all([
@@ -29,6 +32,7 @@ export default async function BranchDetailPage({
 
   return (
     <div className="space-y-5">
+      {saved && <SavedToast />}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500">

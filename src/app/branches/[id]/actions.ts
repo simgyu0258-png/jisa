@@ -27,7 +27,7 @@ export async function updateBranchInfoAction(branchId: number, formData: FormDat
 
   revalidatePath("/branches");
   revalidatePath(`/branches/${branchId}`);
-  redirect(`/branches/${branchId}`);
+  redirect(`/branches/${branchId}?saved=1`);
 }
 
 export async function updatePermissionsAction(branchId: number, formData: FormData) {
@@ -64,5 +64,5 @@ export async function updatePermissionsAction(branchId: number, formData: FormDa
 
   revalidatePath("/permissions");
   revalidatePath(`/branches/${branchId}`);
-  redirect(`/branches/${branchId}`);
+  redirect(`/branches/${branchId}?saved=1`);
 }
