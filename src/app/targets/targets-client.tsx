@@ -83,7 +83,7 @@ export function TargetsClient({
               {programs.map((p) => (
                 <th className="px-2 py-2 text-center" key={p.id}>{p.name}</th>
               ))}
-              <th className="px-2 py-2 text-center font-semibold">합계</th>
+              <th className="px-2 py-2 text-center font-semibold whitespace-nowrap">합계</th>
             </tr>
           </thead>
           <tbody>
