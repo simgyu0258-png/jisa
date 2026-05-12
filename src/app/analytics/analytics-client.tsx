@@ -242,59 +242,39 @@ function computeChartData(
       label: `${i + 1}월`,
     }));
 
-    if (config.branchId === null) {
-      // 전체 지사: 선 1개 (전체 합산)
-      const data = xPoints.map(({ ym, label }) => ({
-        name: label,
-        "전체 합계": monthlyAgg
-          .filter((a) => a.ym === ym &&
-            (config.programIds.length === 0 || config.programIds.includes(a.programId)))
-          .reduce((s, a) => s + a.qty, 0),
-      }));
-      return { data, lineKeys: ["전체 합계"] };
-    } else {
-      // 특정 지사: 선 = 프로그램별
-      const filtered = monthlyAgg.filter((a) => a.branchId === config.branchId);
-      const data = xPoints.map(({ ym, label }) => {
-        const pt: Record<string, string | number> = { name: label };
-        for (const p of selectedProgs) {
-          pt[p.name] = filtered
-            .filter((a) => a.programId === p.id && a.ym === ym)
-            .reduce((s, a) => s + a.qty, 0);
-        }
-        return pt;
-      });
-      return { data, lineKeys: selectedProgs.map((p) => p.name) };
-    }
+    // 전체/특정 지사 모두 선 = 프로그램별
+    const filtered = config.branchId === null
+      ? monthlyAgg
+      : monthlyAgg.filter((a) => a.branchId === config.branchId);
+    const data = xPoints.map(({ ym, label }) => {
+      const pt: Record<string, string | number> = { name: label };
+      for (const p of selectedProgs) {
+        pt[p.name] = filtered
+          .filter((a) => a.programId === p.id && a.ym === ym)
+          .reduce((s, a) => s + a.qty, 0);
+      }
+      return pt;
+    });
+    return { data, lineKeys: selectedProgs.map((p) => p.name) };
   } else {
     // 호별
     const maxIssues = Math.max(...(selectedProgs.length > 0 ? selectedProgs : programs).map((p) => p.totalIssues), 12);
     const xPoints = Array.from({ length: maxIssues }, (_, i) => ({ n: i + 1, label: `${i + 1}호` }));
     const filtered = issueAgg.filter((a) => a.year === config.year);
 
-    if (config.branchId === null) {
-      // 전체 지사: 선 1개 (전체 합산)
-      const data = xPoints.map(({ n, label }) => ({
-        name: label,
-        "전체 합계": filtered
-          .filter((a) => a.issueNumber === n &&
-            (config.programIds.length === 0 || config.programIds.includes(a.programId)))
-          .reduce((s, a) => s + a.qty, 0),
-      }));
-      return { data, lineKeys: ["전체 합계"] };
-    } else {
-      // 특정 지사: 선 = 프로그램별
-      const branchFiltered = filtered.filter((a) => a.branchId === config.branchId);
-      const data = xPoints.map(({ n, label }) => {
-        const pt: Record<string, string | number> = { name: label };
-        for (const p of selectedProgs) {
-          pt[p.name] = n > p.totalIssues ? 0 : branchFiltered
-            .filter((a) => a.programId === p.id && a.issueNumber === n)
-            .reduce((s, a) => s + a.qty, 0);
-        }
-        return pt;
-      });
-      return { data, lineKeys: selectedProgs.map((p) => p.name) };
-    }
+    // 전체/특정 지사 모두 선 = 프로그램별
+    const branchFiltered = config.branchId === null
+      ? filtered
+      : filtered.filter((a) => a.branchId === config.branchId);
+    const data = xPoints.map(({ n, label }) => {
+      const pt: Record<string, string | number> = { name: label };
+      for (const p of selectedProgs) {
+        pt[p.name] = n > p.totalIssues ? 0 : branchFiltered
+          .filter((a) => a.programId === p.id && a.issueNumber === n)
+          .reduce((s, a) => s + a.qty, 0);
+      }
+      return pt;
+    });
+    return { data, lineKeys: selectedProgs.map((p) => p.name) };
   }
 }
