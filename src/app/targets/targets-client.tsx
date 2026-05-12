@@ -40,11 +40,13 @@ export function TargetsClient({
     setSaving(true);
     try {
       const data = branches.flatMap((b) =>
-        programs.map((p) => ({
-          branchId: b.id,
-          programId: p.id,
-          quantity: targets[`${b.id}-${p.id}`] ?? 0,
-        })),
+        programs
+          .filter((p) => enabledSet.has(`${b.id}-${p.id}`))
+          .map((p) => ({
+            branchId: b.id,
+            programId: p.id,
+            quantity: targets[`${b.id}-${p.id}`] ?? 0,
+          })),
       );
       await saveTargetsAction(year, data);
       setSaved(true);

@@ -18,7 +18,7 @@ export default async function HomePage() {
   const currentYear = new Date().getFullYear();
 
   const [programs, currentByProgram, currentTotal, previousTotal, lastYearTotal, allRecent, byIssue,
-    yearTargets, yearOrders, branches] =
+    yearTargets, yearOrders, branches, activePermissions] =
     await Promise.all([
       prisma.program.findMany({ orderBy: { id: "asc" } }),
       prisma.saleOrder.groupBy({
@@ -53,6 +53,7 @@ export default async function HomePage() {
         select: { quantity: true, institution: { select: { branchId: true } } },
       }),
       prisma.branch.findMany({ select: { id: true, name: true } }),
+      prisma.branchProgramPermission.findMany({ where: { isEnabled: true }, select: { branchId: true, programId: true } }),
     ]);
 
   const totalCurrent = currentTotal._sum.quantity ?? 0;
@@ -83,11 +84,15 @@ export default async function HomePage() {
     quantity: monthlyMap.get(month) ?? 0,
   }));
 
-  // 목표 달성 현황 (목표가 있는 지사만)
+  // 현재 권한 기준 필터링
+  const permSet = new Set(activePermissions.map((p) => `${p.branchId}-${p.programId}`));
+  const validTargets = yearTargets.filter((t) => permSet.has(`${t.branchId}-${t.programId}`));
+
+  // 목표 달성 현황 (권한 있고 목표가 있는 지사만)
   const branchesWithTarget = new Set(
-    yearTargets.filter((t) => t.quantity > 0).map((t) => t.branchId)
+    validTargets.filter((t) => t.quantity > 0).map((t) => t.branchId)
   );
-  const totalTarget = yearTargets.reduce((s, t) => s + t.quantity, 0);
+  const totalTarget = validTargets.reduce((s, t) => s + t.quantity, 0);
   const totalYearActual = yearOrders
     .filter((o) => branchesWithTarget.has(o.institution.branchId))
     .reduce((s, o) => s + o.quantity, 0);
@@ -95,7 +100,7 @@ export default async function HomePage() {
 
   // 지사별 달성률 (목표가 있는 지사만)
   const targetByBranch = new Map<number, number>();
-  for (const t of yearTargets) {
+  for (const t of validTargets) {
     targetByBranch.set(t.branchId, (targetByBranch.get(t.branchId) ?? 0) + t.quantity);
   }
   const actualByBranch = new Map<number, number>();
