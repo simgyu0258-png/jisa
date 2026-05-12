@@ -81,7 +81,7 @@ export function TargetsClient({
             <tr>
               <th className="px-3 py-2 text-left">지사</th>
               {programs.map((p) => (
-                <th className="px-2 py-2 text-center" key={p.id}>{p.name}</th>
+                <th className="px-2 py-2 text-center break-all" style={{ width: "5rem" }} key={p.id}>{p.name}</th>
               ))}
               <th className="px-2 py-2 text-center font-semibold whitespace-nowrap">합계</th>
             </tr>
@@ -94,7 +94,7 @@ export function TargetsClient({
                 <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
                   <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
                   {programs.map((p) => (
-                    <td className="px-2 py-1" key={p.id}>
+                    <td className="px-2 py-1" style={{ width: "5rem" }} key={p.id}>
                       <input
                         className="w-full text-center text-sm"
                         min={0}
