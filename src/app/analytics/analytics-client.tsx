@@ -207,7 +207,7 @@ function ChartCard({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} width={40} />
-              <Tooltip content={<SortedTooltip />} />
+              <Tooltip content={<SortedTooltip />} wrapperStyle={{ zIndex: 50 }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               {lineKeys.map((key, i) => (
                 <Line
