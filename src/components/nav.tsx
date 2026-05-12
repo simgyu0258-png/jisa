@@ -10,6 +10,7 @@ const menus = [
   { href: "/branches", label: "지사 관리", masterOnly: false },
   { href: "/permissions", label: "판매권한 조회", masterOnly: false },
   { href: "/sales", label: "판매부수 조회 및 관리", masterOnly: false },
+  { href: "/analytics", label: "판매 분석", masterOnly: false },
   { href: "/programs", label: "프로그램 관리", masterOnly: true },
   { href: "/accounts", label: "계정 관리", masterOnly: true },
 ];
