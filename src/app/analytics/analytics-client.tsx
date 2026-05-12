@@ -243,18 +243,15 @@ function computeChartData(
     }));
 
     if (config.branchId === null) {
-      // 전체 지사: 선 = 지사별
-      const data = xPoints.map(({ ym, label }) => {
-        const pt: Record<string, string | number> = { name: label };
-        for (const b of branches) {
-          pt[b.name] = monthlyAgg
-            .filter((a) => a.branchId === b.id && a.ym === ym &&
-              (config.programIds.length === 0 || config.programIds.includes(a.programId)))
-            .reduce((s, a) => s + a.qty, 0);
-        }
-        return pt;
-      });
-      return { data, lineKeys: branches.map((b) => b.name) };
+      // 전체 지사: 선 1개 (전체 합산)
+      const data = xPoints.map(({ ym, label }) => ({
+        name: label,
+        "전체 합계": monthlyAgg
+          .filter((a) => a.ym === ym &&
+            (config.programIds.length === 0 || config.programIds.includes(a.programId)))
+          .reduce((s, a) => s + a.qty, 0),
+      }));
+      return { data, lineKeys: ["전체 합계"] };
     } else {
       // 특정 지사: 선 = 프로그램별
       const filtered = monthlyAgg.filter((a) => a.branchId === config.branchId);
@@ -276,18 +273,15 @@ function computeChartData(
     const filtered = issueAgg.filter((a) => a.year === config.year);
 
     if (config.branchId === null) {
-      // 전체 지사: 선 = 지사별
-      const data = xPoints.map(({ n, label }) => {
-        const pt: Record<string, string | number> = { name: label };
-        for (const b of branches) {
-          pt[b.name] = filtered
-            .filter((a) => a.branchId === b.id && a.issueNumber === n &&
-              (config.programIds.length === 0 || config.programIds.includes(a.programId)))
-            .reduce((s, a) => s + a.qty, 0);
-        }
-        return pt;
-      });
-      return { data, lineKeys: branches.map((b) => b.name) };
+      // 전체 지사: 선 1개 (전체 합산)
+      const data = xPoints.map(({ n, label }) => ({
+        name: label,
+        "전체 합계": filtered
+          .filter((a) => a.issueNumber === n &&
+            (config.programIds.length === 0 || config.programIds.includes(a.programId)))
+          .reduce((s, a) => s + a.qty, 0),
+      }));
+      return { data, lineKeys: ["전체 합계"] };
     } else {
       // 특정 지사: 선 = 프로그램별
       const branchFiltered = filtered.filter((a) => a.branchId === config.branchId);
