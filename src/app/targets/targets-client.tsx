@@ -23,6 +23,7 @@ export function TargetsClient({
   const [targets, setTargets] = useState<Record<string, number>>(initialTargets);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(year);
 
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: currentYear - minYear + 2 }, (_, i) => minYear + i);
@@ -59,13 +60,19 @@ export function TargetsClient({
         <div className="flex items-center gap-2">
           <select
             className="text-sm"
-            value={year}
-            onChange={(e) => router.push(`/targets?year=${e.target.value}`)}
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
           >
             {yearOptions.map((y) => (
               <option key={y} value={y}>{y}년</option>
             ))}
           </select>
+          <button
+            className="rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            onClick={() => router.push(`/targets?year=${selectedYear}`)}
+          >
+            조회
+          </button>
           <button
             className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
             disabled={saving}
