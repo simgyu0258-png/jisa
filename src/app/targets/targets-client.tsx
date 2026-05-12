@@ -26,6 +26,7 @@ export function TargetsClient({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [selectedYear, setSelectedYear] = useState(year);
+  const [filterBranchId, setFilterBranchId] = useState<number | null>(null);
 
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: currentYear - minYear + 2 }, (_, i) => minYear + i);
@@ -55,6 +56,10 @@ export function TargetsClient({
     }
   }
 
+  const visibleBranches = filterBranchId
+    ? branches.filter((b) => b.id === filterBranchId)
+    : branches;
+
   return (
     <div className="space-y-4">
       {saved && <SavedToast />}
@@ -62,6 +67,16 @@ export function TargetsClient({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">목표 관리</h1>
         <div className="flex items-center gap-2">
+          <select
+            className="text-sm"
+            value={filterBranchId ?? ""}
+            onChange={(e) => setFilterBranchId(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">전체 지사</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
           <select
             className="text-sm"
             value={selectedYear}
@@ -103,7 +118,7 @@ export function TargetsClient({
             </tr>
           </thead>
           <tbody>
-            {branches.map((branch) => {
+            {visibleBranches.map((branch) => {
               const values = programs.map((p) => targets[`${branch.id}-${p.id}`] ?? 0);
               const total = values.reduce((s, v) => s + v, 0);
               return (
@@ -150,11 +165,11 @@ export function TargetsClient({
             <tr>
               <td className="px-3 py-2">합계</td>
               {programs.map((p) => {
-                const total = branches.reduce((s, b) => s + (targets[`${b.id}-${p.id}`] ?? 0), 0);
+                const total = visibleBranches.reduce((s, b) => s + (targets[`${b.id}-${p.id}`] ?? 0), 0);
                 return <td className="px-2 py-2 text-center" key={p.id}>{total.toLocaleString()}</td>;
               })}
               <td className="px-2 py-2 text-center">
-                {branches.reduce((s, b) => s + programs.reduce((ss, p) => ss + (targets[`${b.id}-${p.id}`] ?? 0), 0), 0).toLocaleString()}
+                {visibleBranches.reduce((s, b) => s + programs.reduce((ss, p) => ss + (targets[`${b.id}-${p.id}`] ?? 0), 0), 0).toLocaleString()}
               </td>
             </tr>
           </tfoot>
