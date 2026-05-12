@@ -40,6 +40,7 @@ export default async function TargetsPage({
 
   return (
     <TargetsClient
+      key={year}
       branches={branches}
       programs={programs}
       year={year}
