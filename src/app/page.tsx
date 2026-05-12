@@ -83,9 +83,14 @@ export default async function HomePage() {
     quantity: monthlyMap.get(month) ?? 0,
   }));
 
-  // 목표 달성 현황
+  // 목표 달성 현황 (목표가 있는 지사만)
+  const branchesWithTarget = new Set(
+    yearTargets.filter((t) => t.quantity > 0).map((t) => t.branchId)
+  );
   const totalTarget = yearTargets.reduce((s, t) => s + t.quantity, 0);
-  const totalYearActual = yearOrders.reduce((s, o) => s + o.quantity, 0);
+  const totalYearActual = yearOrders
+    .filter((o) => branchesWithTarget.has(o.institution.branchId))
+    .reduce((s, o) => s + o.quantity, 0);
   const totalAchievement = totalTarget > 0 ? (totalYearActual / totalTarget) * 100 : null;
 
   // 지사별 달성률 (목표가 있는 지사만)
@@ -96,6 +101,7 @@ export default async function HomePage() {
   const actualByBranch = new Map<number, number>();
   for (const o of yearOrders) {
     const bid = o.institution.branchId;
+    if (!branchesWithTarget.has(bid)) continue;
     actualByBranch.set(bid, (actualByBranch.get(bid) ?? 0) + o.quantity);
   }
   const branchRanking = branches
