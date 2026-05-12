@@ -81,7 +81,7 @@ export function TargetsClient({
             <tr>
               <th className="px-3 py-2 text-left">지사</th>
               {programs.map((p) => (
-                <th className="px-3 py-2 text-right whitespace-nowrap" key={p.id}>{p.name}</th>
+                <th className="px-3 py-2 text-center whitespace-nowrap" key={p.id}>{p.name}</th>
               ))}
               <th className="px-3 py-2 text-right font-semibold">합계</th>
             </tr>
@@ -94,9 +94,9 @@ export function TargetsClient({
                 <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
                   <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
                   {programs.map((p) => (
-                    <td className="px-1 py-1" key={p.id}>
+                    <td className="px-3 py-1" key={p.id}>
                       <input
-                        className="w-20 text-right text-sm"
+                        className="w-full text-center text-sm"
                         min={0}
                         type="number"
                         value={targets[`${branch.id}-${p.id}`] ?? 0}
@@ -114,7 +114,7 @@ export function TargetsClient({
               <td className="px-3 py-2">합계</td>
               {programs.map((p) => {
                 const total = branches.reduce((s, b) => s + (targets[`${b.id}-${p.id}`] ?? 0), 0);
-                return <td className="px-3 py-2 text-right" key={p.id}>{total.toLocaleString()}</td>;
+                return <td className="px-3 py-2 text-center" key={p.id}>{total.toLocaleString()}</td>;
               })}
               <td className="px-3 py-2 text-right">
                 {branches.reduce((s, b) => s + programs.reduce((ss, p) => ss + (targets[`${b.id}-${p.id}`] ?? 0), 0), 0).toLocaleString()}
