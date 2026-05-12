@@ -2,14 +2,18 @@ import { prisma } from "@/lib/prisma";
 import { AnalyticsClient } from "./analytics-client";
 
 export default async function AnalyticsPage() {
-  const [branches, programs, saleOrders, institutions] = await Promise.all([
+  const [branches, programs, saleOrders, institutions, oldestOrder] = await Promise.all([
     prisma.branch.findMany({ orderBy: { name: "asc" } }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
     prisma.saleOrder.findMany({
       select: { institutionId: true, programId: true, issueNumber: true, orderDate: true, quantity: true },
     }),
     prisma.institution.findMany({ select: { id: true, branchId: true } }),
+    prisma.saleOrder.findFirst({ orderBy: { orderDate: "asc" }, select: { orderDate: true } }),
   ]);
+
+  const currentYear = new Date().getFullYear();
+  const minYear = oldestOrder ? Number(oldestOrder.orderDate.slice(0, 4)) : currentYear;
 
   const instBranchMap = new Map(institutions.map((i) => [i.id, i.branchId]));
 
@@ -45,6 +49,7 @@ export default async function AnalyticsPage() {
       programs={programs}
       monthlyAgg={monthlyAgg}
       issueAgg={issueAgg}
+      minYear={minYear}
     />
   );
 }

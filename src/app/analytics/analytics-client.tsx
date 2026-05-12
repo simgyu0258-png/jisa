@@ -23,19 +23,19 @@ type CardConfig = {
 const LINE_COLORS = ["#2563eb", "#16a34a", "#dc2626", "#9333ea", "#ea580c", "#0891b2", "#ca8a04", "#db2777"];
 const LS_KEY = "jisa-analytics-v1";
 const THIS_YEAR = String(new Date().getFullYear());
-const YEAR_OPTIONS = Array.from({ length: 7 }, (_, i) => String(new Date().getFullYear() - 3 + i));
 
 function newCard(): CardConfig {
   return { id: crypto.randomUUID(), year: THIS_YEAR, basis: "monthly", branchId: null, programIds: [], configured: false };
 }
 
 export function AnalyticsClient({
-  branches, programs, monthlyAgg, issueAgg,
+  branches, programs, monthlyAgg, issueAgg, minYear,
 }: {
   branches: Branch[];
   programs: Program[];
   monthlyAgg: MonthlyAgg[];
   issueAgg: IssueAgg[];
+  minYear: number;
 }) {
   const [cards, setCards] = useState<CardConfig[]>([newCard()]);
   const [ready, setReady] = useState(false);
@@ -87,6 +87,7 @@ export function AnalyticsClient({
             programs={programs}
             monthlyAgg={monthlyAgg}
             issueAgg={issueAgg}
+            minYear={minYear}
             onUpdate={(u) => updateCard(card.id, u)}
             onRemove={() => removeCard(card.id)}
           />
@@ -118,13 +119,14 @@ function SortedTooltip({ active, payload, label }: {
 }
 
 function ChartCard({
-  config, branches, programs, monthlyAgg, issueAgg, onUpdate, onRemove,
+  config, branches, programs, monthlyAgg, issueAgg, minYear, onUpdate, onRemove,
 }: {
   config: CardConfig;
   branches: Branch[];
   programs: Program[];
   monthlyAgg: MonthlyAgg[];
   issueAgg: IssueAgg[];
+  minYear: number;
   onUpdate: (u: Partial<CardConfig>) => void;
   onRemove: () => void;
 }) {
@@ -158,7 +160,7 @@ function ChartCard({
         {/* 필터 행 */}
         <div className="flex flex-wrap items-center gap-2">
           <select className="text-sm" value={config.year} onChange={(e) => handleUpdate({ year: e.target.value })}>
-            {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}년</option>)}
+            {Array.from({ length: new Date().getFullYear() - minYear + 1 }, (_, i) => String(minYear + i)).map((y) => <option key={y} value={y}>{y}년</option>)}
           </select>
           <select className="text-sm" value={config.basis} onChange={(e) => handleUpdate({ basis: e.target.value as CardConfig["basis"] })}>
             <option value="monthly">월별</option>

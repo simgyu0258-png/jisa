@@ -16,7 +16,7 @@ type IssueModalCell = { branchId: number; branchName: string; issueNumber: numbe
 export function SalesViewClient({
   branches, programs, allInstitutions,
   monthlyOrders, issueOrders,
-  view, selectedBranchId, selectedYear,
+  view, selectedBranchId, selectedYear, minYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
   branches: Branch[];
@@ -27,6 +27,7 @@ export function SalesViewClient({
   view: "monthly" | "issue";
   selectedBranchId?: number;
   selectedYear: string;
+  minYear: number;
   maxIssues: number;
   canEdit: boolean;
   canBulkEdit?: boolean;
@@ -49,7 +50,7 @@ export function SalesViewClient({
   }
 
   const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 3 + i);
+  const yearOptions = Array.from({ length: currentYear - minYear + 1 }, (_, i) => minYear + i);
   const issueNumbers = Array.from({ length: maxIssues }, (_, i) => i + 1);
   const months = Array.from({ length: 12 }, (_, i) => ({
     label: `${i + 1}월`,

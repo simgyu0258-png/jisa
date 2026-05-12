@@ -19,14 +19,18 @@ export default async function SalesPage({
   const branchId = params.branchId ? Number(params.branchId) : undefined;
   const year = params.year ?? new Date().getFullYear().toString();
 
-  const [branches, programs, allInstitutions] = await Promise.all([
+  const [branches, programs, allInstitutions, oldestOrder] = await Promise.all([
     prisma.branch.findMany({ orderBy: { name: "asc" } }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
     prisma.institution.findMany({
       include: { branch: { select: { name: true } } },
       orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],
     }),
+    prisma.saleOrder.findFirst({ orderBy: { orderDate: "asc" }, select: { orderDate: true } }),
   ]);
+
+  const currentYear = new Date().getFullYear();
+  const minYear = oldestOrder ? Number(oldestOrder.orderDate.slice(0, 4)) : currentYear;
 
   const monthlyOrders = view === "monthly"
     ? await prisma.saleOrder.findMany({
@@ -60,6 +64,7 @@ export default async function SalesPage({
         view={view}
         selectedBranchId={branchId}
         selectedYear={year}
+        minYear={minYear}
         maxIssues={maxIssues}
         canEdit={!!session}
       />
