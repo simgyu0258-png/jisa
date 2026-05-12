@@ -127,10 +127,12 @@ export function TargetsClient({
                             />
                             {diff !== null && (
                               <div className={`mt-0.5 text-center text-xs ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-500" : "text-slate-400"}`}>
-                                {diff > 0 ? `▲ ${diff.toLocaleString()}` : diff < 0 ? `▼ ${Math.abs(diff).toLocaleString()}` : "= 전년동일"}
+                                {diff > 0 ? `▲ ${diff.toLocaleString()}` : diff < 0 ? `▼ ${Math.abs(diff).toLocaleString()}` : "—"}
                               </div>
                             )}
                           </>
+                        ) : current > 0 ? (
+                          <div className="text-center text-sm text-slate-400">{current.toLocaleString()}</div>
                         ) : (
                           <div className="text-center text-slate-300">—</div>
                         )}
