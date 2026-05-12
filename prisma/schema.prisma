@@ -21,6 +21,7 @@ model Branch {
   updatedAt    DateTime                  @updatedAt @map("updated_at")
   permissions  BranchProgramPermission[]
   institutions Institution[]
+  targets      SalesTarget[]
 
   @@map("branches")
 }
@@ -31,8 +32,22 @@ model Program {
   totalIssues Int                       @default(12) @map("total_issues")
   permissions BranchProgramPermission[]
   orders      SaleOrder[]
+  targets     SalesTarget[]
 
   @@map("programs")
+}
+
+model SalesTarget {
+  id        Int     @id @default(autoincrement())
+  branchId  Int     @map("branch_id")
+  programId Int     @map("program_id")
+  year      Int
+  quantity  Int     @default(0)
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  program   Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, programId, year])
+  @@map("sales_targets")
 }
 
 model BranchProgramPermission {

@@ -11,6 +11,7 @@ const menus = [
   { href: "/permissions", label: "판매권한 조회", masterOnly: false },
   { href: "/sales", label: "판매부수 조회 및 관리", masterOnly: false },
   { href: "/analytics", label: "판매 분석", masterOnly: false },
+  { href: "/targets", label: "목표 관리", masterOnly: true },
   { href: "/programs", label: "프로그램 관리", masterOnly: true },
   { href: "/accounts", label: "계정 관리", masterOnly: true },
 ];
