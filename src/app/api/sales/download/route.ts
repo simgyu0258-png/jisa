@@ -8,12 +8,17 @@ import { getFiscalYearRange, getCurrentFiscalYear } from "@/lib/month";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const yearParam = searchParams.get("year");
+  const branchIdParam = searchParams.get("branchId");
   const year = yearParam ? Number(yearParam) : getCurrentFiscalYear();
+  const branchId = branchIdParam ? Number(branchIdParam) : undefined;
   const { gte, lt } = getFiscalYearRange(year);
 
   const [orders, targets, programs] = await Promise.all([
     prisma.saleOrder.findMany({
-      where: { orderDate: { gte, lt } },
+      where: {
+        orderDate: { gte, lt },
+        ...(branchId ? { institution: { branchId } } : {}),
+      },
       include: {
         institution: { include: { branch: { select: { name: true } } } },
         program: { select: { name: true, totalIssues: true } },
@@ -25,7 +30,7 @@ export async function GET(req: NextRequest) {
         { issueNumber: "asc" },
       ],
     }),
-    prisma.salesTarget.findMany({ where: { year } }),
+    prisma.salesTarget.findMany({ where: { year, ...(branchId ? { branchId } : {}) } }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
   ]);
 
@@ -99,7 +104,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="sales_${year}.xlsx"`,
+      "Content-Disposition": `attachment; filename="sales_${year}${branchId ? `_branch${branchId}` : ""}.xlsx"`,
       "Cache-Control": "no-store",
     },
   });

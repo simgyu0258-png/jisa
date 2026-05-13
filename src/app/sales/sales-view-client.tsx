@@ -268,7 +268,7 @@ export function SalesViewClient({
         <div className="flex items-center gap-2">
           <a
             className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
-            href={`/api/sales/download?year=${selectedYear}&t=${Date.now()}`}
+            href={`/api/sales/download?year=${selectedYear}${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}&t=${Date.now()}`}
           >엑셀 다운로드</a>
           {canEdit && (
             <button
