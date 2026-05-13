@@ -91,35 +91,67 @@ export async function GET(req: NextRequest) {
     { wch: 8 },
   ];
 
-  // ── Sheet 2: 프로그램별 요약 ──
-  // 프로그램별 실적 집계
-  const programActual = new Map<number, number>();
-  for (const agg of aggMap.values()) {
-    const qty = [...agg.issues.values()].reduce((s, v) => s + v, 0);
-    programActual.set(agg.programId, (programActual.get(agg.programId) ?? 0) + qty);
+  // ── Sheet 2: 요약 ──
+  function rate(actual: number, target: number) {
+    return target > 0 ? `${((actual / target) * 100).toFixed(1)}%` : "-";
   }
 
-  const summaryHeaders = ["프로그램명", "실적", "목표", "달성률"];
-  const summaryRows = programs.map((p) => {
-    const actual = programActual.get(p.id) ?? 0;
-    const target = [...targetMap.entries()]
-      .filter(([k]) => k.endsWith(`-${p.id}`))
-      .reduce((s, [, v]) => s + v, 0);
-    const rate = target > 0 ? `${((actual / target) * 100).toFixed(1)}%` : "-";
-    return [p.name, actual, target || "", rate];
-  });
+  // 지사×프로그램 집계
+  const bpMap = new Map<string, { branchName: string; branchId: number; programName: string; programId: number; actual: number }>();
+  for (const agg of aggMap.values()) {
+    const key = `${agg.branchId}-${agg.programId}`;
+    const qty = [...agg.issues.values()].reduce((s, v) => s + v, 0);
+    const existing = bpMap.get(key);
+    if (existing) { existing.actual += qty; }
+    else { bpMap.set(key, { branchName: agg.branchName, branchId: agg.branchId, programName: agg.programName, programId: agg.programId, actual: qty }); }
+  }
 
+  // 프로그램별 전체 집계
+  const programActual = new Map<number, number>();
+  for (const bp of bpMap.values()) {
+    programActual.set(bp.programId, (programActual.get(bp.programId) ?? 0) + bp.actual);
+  }
+
+  const summaryData: unknown[][] = [];
+  const summaryHeaders = ["지사명", "프로그램명", "실적", "목표", "달성률"];
+  summaryData.push(summaryHeaders);
+
+  if (!branchId) {
+    // Section 1: 지사×프로그램 (전체 지사 다운로드 시)
+    const branches = [...new Set([...bpMap.values()].map((b) => b.branchName))].sort();
+    for (const bn of branches) {
+      const branchRows = [...bpMap.values()].filter((b) => b.branchName === bn);
+      let branchTotal = 0;
+      let branchTargetTotal = 0;
+      for (const bp of branchRows) {
+        const t = targetMap.get(`${bp.branchId}-${bp.programId}`) ?? 0;
+        branchTotal += bp.actual;
+        branchTargetTotal += t;
+        summaryData.push([bn, bp.programName, bp.actual, t || "", rate(bp.actual, t)]);
+      }
+      summaryData.push([`${bn} 소계`, "", branchTotal, branchTargetTotal || "", rate(branchTotal, branchTargetTotal)]);
+      summaryData.push([]);
+    }
+    summaryData.push([]);
+  }
+
+  // Section 2: 프로그램별 합계
+  summaryData.push(["", "프로그램별 합계", "", "", ""]);
+  for (const p of programs) {
+    const actual = programActual.get(p.id) ?? 0;
+    const target = [...targetMap.entries()].filter(([k]) => k.endsWith(`-${p.id}`)).reduce((s, [, v]) => s + v, 0);
+    summaryData.push(["", p.name, actual, target || "", rate(actual, target)]);
+  }
+
+  summaryData.push([]);
+
+  // Section 3: 전체 합계
   const totalActual = [...programActual.values()].reduce((s, v) => s + v, 0);
   const totalTarget = [...targetMap.values()].reduce((s, v) => s + v, 0);
-  const totalRate = totalTarget > 0 ? `${((totalActual / totalTarget) * 100).toFixed(1)}%` : "-";
+  summaryData.push(["전체 합계", "", totalActual, totalTarget || "", rate(totalActual, totalTarget)]);
 
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    summaryHeaders,
-    ...summaryRows,
-    [],
-    ["전체 합계", totalActual, totalTarget || "", totalRate],
-  ]);
-  ws2["!cols"] = [{ wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws2["!cols"] = [{ wch: 20 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws1, "상세");
