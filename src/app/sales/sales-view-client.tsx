@@ -266,18 +266,10 @@ export function SalesViewClient({
           >목표 현황</button>
         </div>
         {canEdit && (
-          <div className="flex items-center gap-2">
-            {canBulkEdit && (
-              <>
-                <a className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="/sales/bulk-edit">일괄 수정</a>
-                <a className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="/sales/bulk">일괄 등록</a>
-              </>
-            )}
-            <button
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
-              onClick={() => setShowOrderModal(true)}
-            >판매부수 입력</button>
-          </div>
+          <button
+            className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
+            onClick={() => setShowOrderModal(true)}
+          >판매부수 입력</button>
         )}
       </div>
 
