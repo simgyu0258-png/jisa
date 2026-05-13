@@ -4,7 +4,7 @@ import { UploadClient } from "./upload-client";
 
 export default async function UploadPage() {
   const session = await auth();
-  if (!session || (session.user as { role?: string }).role !== "master") redirect("/");
+  if (!session) redirect("/login");
 
   return <UploadClient />;
 }
