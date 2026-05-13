@@ -29,9 +29,9 @@ export async function upsertSaleOrderAction(
   await requireAuth();
 
   await prisma.saleOrder.upsert({
-    where: { institutionId_programId_issueNumber: { institutionId, programId, issueNumber } },
+    where: { institutionId_programId_issueNumber_orderDate: { institutionId, programId, issueNumber, orderDate } },
     create: { institutionId, programId, issueNumber, orderDate, quantity: Math.max(0, quantity) },
-    update: { orderDate, quantity: Math.max(0, quantity) },
+    update: { quantity: Math.max(0, quantity) },
   });
 
   revalidatePath("/sales");

@@ -90,7 +90,7 @@ model SaleOrder {
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   program       Program     @relation(fields: [programId], references: [id], onDelete: Cascade)
 
-  @@unique([institutionId, programId, issueNumber])
+  @@unique([institutionId, programId, issueNumber, orderDate])
   @@index([orderDate])
   @@index([issueNumber])
   @@map("sale_orders")

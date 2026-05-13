@@ -42,14 +42,15 @@ export async function POST(request: Request) {
 
     await prisma.saleOrder.upsert({
       where: {
-        institutionId_programId_issueNumber: {
+        institutionId_programId_issueNumber_orderDate: {
           institutionId,
           programId: row.programId,
           issueNumber: row.issueNumber,
+          orderDate: row.orderDate,
         },
       },
       create: { institutionId, programId: row.programId, issueNumber: row.issueNumber, orderDate: row.orderDate, quantity: row.quantity },
-      update: { orderDate: row.orderDate, quantity: row.quantity },
+      update: { quantity: row.quantity },
     });
     upsertedCount++;
   }
