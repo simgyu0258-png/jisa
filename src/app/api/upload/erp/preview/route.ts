@@ -5,8 +5,10 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
-function isWorkbook(name: string) {
-  return name.includes("워크북");
+function isSkipped(name: string) {
+  if (name.includes("워크북")) return true;
+  if (name.includes("꼬모아르떼") && name.includes("바인더")) return true;
+  return false;
 }
 
 function matchProgram(name: string, programs: { id: number; name: string }[]) {
@@ -77,7 +79,7 @@ export async function POST(req: NextRequest) {
     const productName = String(row[col("품목명")] ?? "").trim();
     if (!productName) continue;
 
-    if (isWorkbook(productName)) { skipped++; continue; }
+    if (isSkipped(productName)) { skipped++; continue; }
 
     const program = matchProgram(productName, programs);
     if (!program) { skipped++; continue; }
