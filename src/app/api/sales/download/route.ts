@@ -70,35 +70,60 @@ export async function GET(req: NextRequest) {
     targetMap.set(`${t.branchId}-${t.programId}`, t.quantity);
   }
 
-  // 헤더
   const issueHeaders = Array.from({ length: maxIssues }, (_, i) => `${i + 1}호`);
-  const headers = ["지사명", "기관명", "프로그램명", ...issueHeaders, "합계", "목표", "달성률"];
 
-  // 데이터 행
-  const rows = [...aggMap.values()].map((agg) => {
+  // ── Sheet 1: 기관별 상세 ──
+  const detailHeaders = ["지사명", "기관명", "프로그램명", ...issueHeaders, "합계"];
+  const detailRows = [...aggMap.values()].map((agg) => {
     const issueQtys = Array.from({ length: maxIssues }, (_, i) => {
       const n = i + 1;
       if (n > agg.totalIssues) return "";
       return agg.issues.get(n) ?? 0;
     });
     const total = [...agg.issues.values()].reduce((s, v) => s + v, 0);
-    const target = targetMap.get(`${agg.branchId}-${agg.programId}`) ?? 0;
-    const rate = target > 0 ? `${((total / target) * 100).toFixed(1)}%` : "-";
-    return [agg.branchName, agg.instName, agg.programName, ...issueQtys, total, target || "", rate];
+    return [agg.branchName, agg.instName, agg.programName, ...issueQtys, total];
   });
 
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-  // 컬럼 너비
-  ws["!cols"] = [
+  const ws1 = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailRows]);
+  ws1["!cols"] = [
     { wch: 16 }, { wch: 20 }, { wch: 16 },
     ...Array(maxIssues).fill({ wch: 6 }),
-    { wch: 8 }, { wch: 8 }, { wch: 8 },
+    { wch: 8 },
   ];
 
-  // 헤더 행 스타일
+  // ── Sheet 2: 프로그램별 요약 ──
+  // 프로그램별 실적 집계
+  const programActual = new Map<number, number>();
+  for (const agg of aggMap.values()) {
+    const qty = [...agg.issues.values()].reduce((s, v) => s + v, 0);
+    programActual.set(agg.programId, (programActual.get(agg.programId) ?? 0) + qty);
+  }
+
+  const summaryHeaders = ["프로그램명", "실적", "목표", "달성률"];
+  const summaryRows = programs.map((p) => {
+    const actual = programActual.get(p.id) ?? 0;
+    const target = [...targetMap.entries()]
+      .filter(([k]) => k.endsWith(`-${p.id}`))
+      .reduce((s, [, v]) => s + v, 0);
+    const rate = target > 0 ? `${((actual / target) * 100).toFixed(1)}%` : "-";
+    return [p.name, actual, target || "", rate];
+  });
+
+  const totalActual = [...programActual.values()].reduce((s, v) => s + v, 0);
+  const totalTarget = [...targetMap.values()].reduce((s, v) => s + v, 0);
+  const totalRate = totalTarget > 0 ? `${((totalActual / totalTarget) * 100).toFixed(1)}%` : "-";
+
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    summaryHeaders,
+    ...summaryRows,
+    [],
+    ["전체 합계", totalActual, totalTarget || "", totalRate],
+  ]);
+  ws2["!cols"] = [{ wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `${year}년`);
+  XLSX.utils.book_append_sheet(wb, ws1, "상세");
+  XLSX.utils.book_append_sheet(wb, ws2, "요약");
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
   return new NextResponse(buffer, {
