@@ -265,12 +265,18 @@ export function SalesViewClient({
             onClick={() => navigate({ view: "target" })}
           >목표 현황</button>
         </div>
-        {canEdit && (
-          <button
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
-            onClick={() => setShowOrderModal(true)}
-          >판매부수 입력</button>
-        )}
+        <div className="flex items-center gap-2">
+          <a
+            className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            href={`/api/sales/download?year=${selectedYear}&t=${Date.now()}`}
+          >엑셀 다운로드</a>
+          {canEdit && (
+            <button
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
+              onClick={() => setShowOrderModal(true)}
+            >판매부수 입력</button>
+          )}
+        </div>
       </div>
 
       {/* 월별 현황: 행=지사, 열=월 */}
