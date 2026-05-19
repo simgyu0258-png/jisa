@@ -75,7 +75,7 @@ export default async function SalesPage({
           orderDate: { gte, lt },
           ...(branchId ? { institution: { branchId } } : {}),
         },
-        select: { institutionId: true, issueNumber: true, quantity: true },
+        select: { institutionId: true, programId: true, issueNumber: true, quantity: true },
       })
     : [];
 

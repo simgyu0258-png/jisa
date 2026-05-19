@@ -13,7 +13,7 @@ type IssueOrder = { institutionId: number; programId: number; issueNumber: numbe
 type SalesTarget = { branchId: number; programId: number; quantity: number };
 type TargetActualOrder = { institutionId: number; programId: number; quantity: number };
 type TargetPermission = { branchId: number; programId: number };
-type InstitutionOrder = { institutionId: number; issueNumber: number; quantity: number };
+type InstitutionOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
 
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
 type IssueModalCell = { branchId: number; branchName: string; issueNumber: number };
@@ -47,6 +47,8 @@ export function SalesViewClient({
   const [monthlyModal, setMonthlyModal] = useState<MonthlyModalCell | null>(null);
   const [issueModal, setIssueModal] = useState<IssueModalCell | null>(null);
   const [onlyNoOrder, setOnlyNoOrder] = useState(false);
+  const [instFilterProgramId, setInstFilterProgramId] = useState<number | null>(null);
+  const [instDetailModal, setInstDetailModal] = useState<Institution | null>(null);
 
   function navigate(updates: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
@@ -402,7 +404,7 @@ export function SalesViewClient({
         );
       })()}
 
-      {/* 기관 현황: 행=기관, 열=호, 미주문 강조 */}
+      {/* 기관 현황: 행=기관, 열=호, 프로그램 필터, 기관명 클릭→모달 */}
       {view === "institution" && (() => {
         if (!selectedBranchId) {
           return (
@@ -414,32 +416,36 @@ export function SalesViewClient({
 
         const instOrderMap = new Map<string, number>();
         for (const o of institutionOrders) {
+          if (instFilterProgramId && o.programId !== instFilterProgramId) continue;
           const key = `${o.institutionId}-${o.issueNumber}`;
           instOrderMap.set(key, (instOrderMap.get(key) ?? 0) + o.quantity);
         }
 
         const branchInsts = allInstitutions.filter((i) => i.branchId === selectedBranchId);
         const filteredInsts = onlyNoOrder
-          ? branchInsts.filter((inst) =>
-              issueNumbers.every((n) => !instOrderMap.get(`${inst.id}-${n}`))
-            )
+          ? branchInsts.filter((inst) => issueNumbers.every((n) => !instOrderMap.get(`${inst.id}-${n}`)))
           : branchInsts;
 
         return (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-500">
-                전체 {branchInsts.length}개 기관
-                {onlyNoOrder && ` 중 미주문 ${filteredInsts.length}개`}
+                전체 {branchInsts.length}개 기관{onlyNoOrder && ` 중 미주문 ${filteredInsts.length}개`}
               </p>
-              <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-                <input
-                  type="checkbox"
-                  checked={onlyNoOrder}
-                  onChange={(e) => setOnlyNoOrder(e.target.checked)}
-                />
-                미주문 기관만 보기
-              </label>
+              <div className="flex items-center gap-3">
+                <select
+                  className="text-sm"
+                  value={instFilterProgramId ?? ""}
+                  onChange={(e) => setInstFilterProgramId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">전체 프로그램</option>
+                  {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+                  <input type="checkbox" checked={onlyNoOrder} onChange={(e) => setOnlyNoOrder(e.target.checked)} />
+                  미주문 기관만 보기
+                </label>
+              </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
               <table className="min-w-full text-sm">
@@ -463,12 +469,14 @@ export function SalesViewClient({
                     const total = values.reduce((s, v) => s + v, 0);
                     return (
                       <tr className="border-t border-slate-200 hover:bg-slate-50" key={inst.id}>
-                        <td className="px-3 py-2 whitespace-nowrap font-medium text-slate-700">{inst.name}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <button
+                            className="font-medium text-slate-700 hover:text-blue-600 hover:underline text-left"
+                            onClick={() => setInstDetailModal(inst)}
+                          >{inst.name}</button>
+                        </td>
                         {values.map((v, i) => (
-                          <td
-                            className={`px-3 py-2 text-center ${v === 0 ? "bg-rose-50 text-rose-400" : "text-slate-700"}`}
-                            key={issueNumbers[i]}
-                          >
+                          <td className={`px-3 py-2 text-center ${v === 0 ? "bg-rose-50 text-rose-400" : "text-slate-700"}`} key={issueNumbers[i]}>
                             {v > 0 ? v.toLocaleString() : "✕"}
                           </td>
                         ))}
@@ -479,6 +487,60 @@ export function SalesViewClient({
                 </tbody>
               </table>
             </div>
+
+            {/* 기관 상세 모달 (프로그램×호) */}
+            {instDetailModal && (() => {
+              const detailMap = new Map<string, number>();
+              for (const o of institutionOrders) {
+                if (o.institutionId !== instDetailModal.id) continue;
+                const key = `${o.programId}-${o.issueNumber}`;
+                detailMap.set(key, (detailMap.get(key) ?? 0) + o.quantity);
+              }
+              return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setInstDetailModal(null)}>
+                  <div className="relative max-h-[80vh] w-full max-w-4xl overflow-auto rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+                      <h2 className="font-semibold text-slate-800">{instDetailModal.name} — 프로그램별 주문 현황</h2>
+                      <button className="text-slate-400 hover:text-slate-700" onClick={() => setInstDetailModal(null)}>✕</button>
+                    </div>
+                    <div className="p-6 overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-slate-100">
+                          <tr>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">프로그램</th>
+                            {issueNumbers.map((n) => (
+                              <th className="px-3 py-2 text-center" key={n}>{n}호</th>
+                            ))}
+                            <th className="px-3 py-2 text-center font-semibold">합계</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {programs.map((p) => {
+                            const values = issueNumbers.map((n) => {
+                              if (n > p.totalIssues) return null;
+                              return detailMap.get(`${p.id}-${n}`) ?? 0;
+                            });
+                            const total = values.reduce<number>((s, v) => s + (v ?? 0), 0);
+                            const hasAny = values.some((v) => v !== null && v > 0);
+                            return (
+                              <tr className={`border-t border-slate-200 ${!hasAny ? "opacity-40" : ""}`} key={p.id}>
+                                <td className="px-3 py-2 whitespace-nowrap font-medium text-slate-700">{p.name}</td>
+                                {values.map((v, i) => (
+                                  <td className={`px-3 py-2 text-center ${v === null ? "text-slate-200" : v === 0 ? "bg-rose-50 text-rose-400" : "text-slate-700"}`} key={issueNumbers[i]}>
+                                    {v === null ? "—" : v > 0 ? v.toLocaleString() : "✕"}
+                                  </td>
+                                ))}
+                                <td className="px-3 py-2 text-center font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
