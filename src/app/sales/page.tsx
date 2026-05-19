@@ -16,7 +16,10 @@ export default async function SalesPage({
 }) {
   const [params, session] = await Promise.all([searchParams, auth()]);
 
-  const view = params.view === "issue" ? "issue" : params.view === "target" ? "target" : "monthly";
+  const view = params.view === "issue" ? "issue"
+    : params.view === "target" ? "target"
+    : params.view === "institution" ? "institution"
+    : "monthly";
   const branchId = params.branchId ? Number(params.branchId) : undefined;
   const year = params.year ?? String(getCurrentFiscalYear());
 
@@ -66,6 +69,16 @@ export default async function SalesPage({
       })
     : [];
 
+  const institutionOrders = view === "institution"
+    ? await prisma.saleOrder.findMany({
+        where: {
+          orderDate: { gte, lt },
+          ...(branchId ? { institution: { branchId } } : {}),
+        },
+        select: { institutionId: true, issueNumber: true, quantity: true },
+      })
+    : [];
+
   const maxIssues = Math.max(...programs.map((p) => p.totalIssues), 12);
 
   const allInstList = allInstitutions.map((inst) => ({
@@ -84,6 +97,7 @@ export default async function SalesPage({
         salesTargets={salesTargets}
         targetActualOrders={targetActualOrders}
         targetPermissions={targetPermissions}
+        institutionOrders={institutionOrders}
         view={view}
         selectedBranchId={branchId}
         selectedYear={year}

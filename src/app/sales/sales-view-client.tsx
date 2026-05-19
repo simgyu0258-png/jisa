@@ -13,13 +13,14 @@ type IssueOrder = { institutionId: number; programId: number; issueNumber: numbe
 type SalesTarget = { branchId: number; programId: number; quantity: number };
 type TargetActualOrder = { institutionId: number; programId: number; quantity: number };
 type TargetPermission = { branchId: number; programId: number };
+type InstitutionOrder = { institutionId: number; issueNumber: number; quantity: number };
 
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
 type IssueModalCell = { branchId: number; branchName: string; issueNumber: number };
 
 export function SalesViewClient({
   branches, programs, allInstitutions,
-  monthlyOrders, issueOrders, salesTargets, targetActualOrders, targetPermissions,
+  monthlyOrders, issueOrders, salesTargets, targetActualOrders, targetPermissions, institutionOrders,
   view, selectedBranchId, selectedYear, minYear, fiscalYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
@@ -31,7 +32,8 @@ export function SalesViewClient({
   salesTargets: SalesTarget[];
   targetActualOrders: TargetActualOrder[];
   targetPermissions: TargetPermission[];
-  view: "monthly" | "issue" | "target";
+  institutionOrders: InstitutionOrder[];
+  view: "monthly" | "issue" | "target" | "institution";
   selectedBranchId?: number;
   selectedYear: string;
   minYear: number;
@@ -44,6 +46,7 @@ export function SalesViewClient({
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [monthlyModal, setMonthlyModal] = useState<MonthlyModalCell | null>(null);
   const [issueModal, setIssueModal] = useState<IssueModalCell | null>(null);
+  const [onlyNoOrder, setOnlyNoOrder] = useState(false);
 
   function navigate(updates: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
@@ -264,6 +267,10 @@ export function SalesViewClient({
             className={`px-4 py-2 text-sm font-medium border-l border-slate-200 ${view === "target" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
             onClick={() => navigate({ view: "target" })}
           >목표 현황</button>
+          <button
+            className={`px-4 py-2 text-sm font-medium border-l border-slate-200 ${view === "institution" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => navigate({ view: "institution" })}
+          >기관 현황</button>
         </div>
         <div className="flex items-center gap-2">
           <a
@@ -391,6 +398,87 @@ export function SalesViewClient({
                 })}
               </tbody>
             </table>
+          </div>
+        );
+      })()}
+
+      {/* 기관 현황: 행=기관, 열=호, 미주문 강조 */}
+      {view === "institution" && (() => {
+        if (!selectedBranchId) {
+          return (
+            <div className="rounded-lg border border-slate-200 bg-white p-12 text-center text-sm text-slate-400">
+              지사를 선택하면 기관별 주문 현황을 확인할 수 있습니다.
+            </div>
+          );
+        }
+
+        const instOrderMap = new Map<string, number>();
+        for (const o of institutionOrders) {
+          const key = `${o.institutionId}-${o.issueNumber}`;
+          instOrderMap.set(key, (instOrderMap.get(key) ?? 0) + o.quantity);
+        }
+
+        const branchInsts = allInstitutions.filter((i) => i.branchId === selectedBranchId);
+        const filteredInsts = onlyNoOrder
+          ? branchInsts.filter((inst) =>
+              issueNumbers.every((n) => !instOrderMap.get(`${inst.id}-${n}`))
+            )
+          : branchInsts;
+
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-500">
+                전체 {branchInsts.length}개 기관
+                {onlyNoOrder && ` 중 미주문 ${filteredInsts.length}개`}
+              </p>
+              <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={onlyNoOrder}
+                  onChange={(e) => setOnlyNoOrder(e.target.checked)}
+                />
+                미주문 기관만 보기
+              </label>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">기관</th>
+                    {issueNumbers.map((n) => (
+                      <th className="px-3 py-2 text-center" key={n}>{n}호</th>
+                    ))}
+                    <th className="px-3 py-2 text-center font-semibold">합계</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInsts.length === 0 && (
+                    <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={maxIssues + 2}>
+                      {onlyNoOrder ? "미주문 기관이 없습니다." : "등록된 기관이 없습니다."}
+                    </td></tr>
+                  )}
+                  {filteredInsts.map((inst) => {
+                    const values = issueNumbers.map((n) => instOrderMap.get(`${inst.id}-${n}`) ?? 0);
+                    const total = values.reduce((s, v) => s + v, 0);
+                    return (
+                      <tr className="border-t border-slate-200 hover:bg-slate-50" key={inst.id}>
+                        <td className="px-3 py-2 whitespace-nowrap font-medium text-slate-700">{inst.name}</td>
+                        {values.map((v, i) => (
+                          <td
+                            className={`px-3 py-2 text-center ${v === 0 ? "bg-rose-50 text-rose-400" : "text-slate-700"}`}
+                            key={issueNumbers[i]}
+                          >
+                            {v > 0 ? v.toLocaleString() : "✕"}
+                          </td>
+                        ))}
+                        <td className="px-3 py-2 text-center font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
       })()}
