@@ -22,6 +22,11 @@ export function getFiscalYearFromDate(dateStr: string): number {
   return month >= 3 ? year : year - 1;
 }
 
+export function getCurrentFiscalIssue(): number {
+  const month = new Date().getMonth() + 1;
+  return month >= 3 ? month - 2 : month + 10;
+}
+
 export function getFiscalMonths(year: number): { label: string; ym: string }[] {
   return Array.from({ length: 12 }, (_, i) => {
     const month = i + 3; // 3월부터 시작

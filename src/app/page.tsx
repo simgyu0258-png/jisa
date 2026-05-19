@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { DashboardCharts } from "@/components/dashboard-charts";
-import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange } from "@/lib/month";
+import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange, getCurrentFiscalIssue } from "@/lib/month";
+import { DashboardSummaryCards } from "@/components/dashboard-summary-cards";
 import { prisma } from "@/lib/prisma";
 
 function percentChange(current: number, previous: number) {
@@ -17,9 +18,13 @@ export default async function HomePage() {
 
   const currentYear = getCurrentFiscalYear();
   const { gte: fyGte, lt: fyLt } = getFiscalYearRange(currentYear);
+  const { gte: prevFyGte, lt: prevFyLt } = getFiscalYearRange(currentYear - 1);
+  const currentIssue = getCurrentFiscalIssue();
+  const prevIssue = currentIssue - 1;
 
   const [programs, currentByProgram, currentTotal, previousTotal, lastYearTotal, allRecent, byIssue,
-    yearTargets, yearOrders, branches, activePermissions] =
+    yearTargets, yearOrders, branches, activePermissions,
+    currentIssueTotal, prevIssueTotal, sameIssueLastYear] =
     await Promise.all([
       prisma.program.findMany({ orderBy: { id: "asc" } }),
       prisma.saleOrder.groupBy({
@@ -55,6 +60,9 @@ export default async function HomePage() {
       }),
       prisma.branch.findMany({ select: { id: true, name: true } }),
       prisma.branchProgramPermission.findMany({ where: { isEnabled: true }, select: { branchId: true, programId: true } }),
+      prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }),
+      prevIssue > 0 ? prisma.saleOrder.aggregate({ where: { issueNumber: prevIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }) : Promise.resolve({ _sum: { quantity: 0 } }),
+      prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: prevFyGte, lt: prevFyLt } }, _sum: { quantity: true } }),
     ]);
 
   const totalCurrent = currentTotal._sum.quantity ?? 0;
@@ -191,24 +199,22 @@ export default async function HomePage() {
         </>
       )}
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <article className="rounded-lg border border-slate-200 bg-white p-6">
-          <div className="text-sm text-slate-500">이번 달 총 판매 부수 ({currentMonth})</div>
-          <div className="mt-3 text-4xl font-bold">{totalCurrent.toLocaleString()}</div>
-        </article>
-        <article className="rounded-lg border border-slate-200 bg-white p-6">
-          <div className="text-sm text-slate-500">전월 대비 증감률 ({previousMonth} 대비)</div>
-          <div className={`mt-3 text-4xl font-bold ${change >= 0 ? "text-rose-600" : "text-blue-600"}`}>
-            {change >= 0 ? "+" : ""}{change.toFixed(1)}%
-          </div>
-        </article>
-        <article className="rounded-lg border border-slate-200 bg-white p-6">
-          <div className="text-sm text-slate-500">전년 동월 대비 증감률 ({sameMonthLastYear} 대비)</div>
-          <div className={`mt-3 text-4xl font-bold ${yoyChange >= 0 ? "text-rose-600" : "text-blue-600"}`}>
-            {yoyChange >= 0 ? "+" : ""}{yoyChange.toFixed(1)}%
-          </div>
-        </article>
-      </section>
+      <DashboardSummaryCards
+        monthly={{
+          current: totalCurrent,
+          change: percentChange(totalCurrent, totalPrevious),
+          yoyChange: percentChange(totalCurrent, totalLastYear),
+          currentMonth,
+          previousMonth,
+          sameMonthLastYear,
+        }}
+        issue={{
+          currentIssue,
+          current: currentIssueTotal._sum.quantity ?? 0,
+          prevChange: prevIssue > 0 ? percentChange(currentIssueTotal._sum.quantity ?? 0, prevIssueTotal._sum.quantity ?? 0) : null,
+          yoyChange: percentChange(currentIssueTotal._sum.quantity ?? 0, sameIssueLastYear._sum.quantity ?? 0),
+        }}
+      />
       <DashboardCharts monthlyLine={monthlyLine} programBars={programBars} issueBars={issueBars} currentMonth={currentMonth} />
     </div>
   );
