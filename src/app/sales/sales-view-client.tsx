@@ -353,20 +353,27 @@ export function SalesViewClient({
                   <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={programs.length + 1}>데이터가 없습니다.</td></tr>
                 )}
                 {visibleBranches.map((branch) => {
-                  const totalActual = programs.reduce((s, p) => s + (actualMap.get(`${branch.id}-${p.id}`) ?? 0), 0);
-                  const totalTarget = programs.reduce((s, p) => s + (targetMap.get(`${branch.id}-${p.id}`) ?? 0), 0);
+                  const totalActual = programs.reduce((s, p) => {
+                    const key = `${branch.id}-${p.id}`;
+                    return permSet.has(key) ? s + (actualMap.get(key) ?? 0) : s;
+                  }, 0);
+                  const totalTarget = programs.reduce((s, p) => {
+                    const key = `${branch.id}-${p.id}`;
+                    return permSet.has(key) ? s + (targetMap.get(key) ?? 0) : s;
+                  }, 0);
                   const totalRate = totalTarget > 0 ? (totalActual / totalTarget) * 100 : null;
                   return (
                     <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
                       <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
                       {programs.map((p) => {
                         const key = `${branch.id}-${p.id}`;
+                        const hasPerm = permSet.has(key);
                         const actual = actualMap.get(key) ?? 0;
                         const target = targetMap.get(key) ?? 0;
                         const rate = target > 0 ? (actual / target) * 100 : null;
                         return (
-                          <td className="px-3 py-2 text-center" key={p.id}>
-                            {target === 0 ? (
+                          <td className={`px-3 py-2 text-center ${!hasPerm ? "bg-slate-50" : ""}`} key={p.id}>
+                            {!hasPerm ? null : target === 0 ? (
                               <span className="text-slate-400">-</span>
                             ) : (
                               <>
