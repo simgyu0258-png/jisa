@@ -6,7 +6,7 @@ import { OrderModal } from "./order-modal";
 import { getFiscalMonths } from "@/lib/month";
 
 type Branch = { id: number; name: string };
-type Program = { id: number; name: string; totalIssues: number };
+type Program = { id: number; name: string; totalIssues: number; isOnlyOne: boolean };
 type Institution = { id: number; name: string; branchName: string; branchId: number };
 type MonthlyOrder = { institutionId: number; programId: number; orderDate: string; quantity: number };
 type IssueOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
@@ -318,8 +318,8 @@ export function SalesViewClient({
 
       {/* 목표 현황: 행=지사, 열=프로그램, 셀=실적/목표/달성률 */}
       {view === "target" && (() => {
-        // 온리원키즈포스쿨은 별도 컬럼으로 관리
-        const targetPrograms = programs.filter((p) => !p.name.includes("온리원"));
+        // isOnlyOne 프로그램은 별도 컬럼으로 관리
+        const targetPrograms = programs.filter((p) => !p.isOnlyOne);
         // 집계 (권한 없는 프로그램은 목표 0으로 처리)
         const permSet = new Set(targetPermissions.map((p) => `${p.branchId}-${p.programId}`));
         const targetMap = new Map<string, number>();

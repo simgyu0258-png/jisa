@@ -43,6 +43,7 @@ model Program {
   name         String
   totalIssues  Int                       @default(12) @map("total_issues")
   matchKeyword String?                   @map("match_keyword")
+  isOnlyOne    Boolean                   @default(false) @map("is_only_one")
   permissions  BranchProgramPermission[]
   orders       SaleOrder[]
   targets      SalesTarget[]

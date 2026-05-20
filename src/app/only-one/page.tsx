@@ -14,11 +14,18 @@ export default async function OnlyOnePage({ searchParams }: { searchParams: Prom
   const year = params.year ? Number(params.year) : currentYear;
   const { gte, lt } = getFiscalYearRange(year);
 
-  const [branches, targets, oldestContract] = await Promise.all([
+  const onlyOneProgram = await prisma.program.findFirst({ where: { isOnlyOne: true } });
+
+  const [branches, targets, oldestContract, permissions] = await Promise.all([
     prisma.branch.findMany({ where: { status: "active" }, orderBy: { name: "asc" } }),
     prisma.onlyOneTarget.findMany({ where: { year } }),
     prisma.onlyOneContract.findFirst({ orderBy: { startDate: "asc" }, select: { startDate: true } }),
+    onlyOneProgram
+      ? prisma.branchProgramPermission.findMany({ where: { programId: onlyOneProgram.id, isEnabled: true }, select: { branchId: true } })
+      : Promise.resolve([]),
   ]);
+
+  const permittedBranchIds = new Set(permissions.map((p) => p.branchId));
 
   const minYear = oldestContract ? getFiscalYearFromDate(oldestContract.startDate) : currentYear;
 
@@ -35,11 +42,13 @@ export default async function OnlyOnePage({ searchParams }: { searchParams: Prom
     activeMap.set(bid, (activeMap.get(bid) ?? 0) + c.classCount);
   }
 
-  const summaries = branches.map((branch) => ({
-    branch,
-    target: targetMap.get(branch.id) ?? 0,
-    activeClasses: activeMap.get(branch.id) ?? 0,
-  }));
+  const summaries = branches
+    .filter((branch) => permittedBranchIds.size === 0 || permittedBranchIds.has(branch.id))
+    .map((branch) => ({
+      branch,
+      target: targetMap.get(branch.id) ?? 0,
+      activeClasses: activeMap.get(branch.id) ?? 0,
+    }));
 
   return (
     <OnlyOneClient

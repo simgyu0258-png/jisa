@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const col = (name: string) => headerMap[name] ?? -1;
 
   const [programs, branches, aliases, institutions, skipRules, productMappings] = await Promise.all([
-    prisma.program.findMany({ select: { id: true, name: true, totalIssues: true, matchKeyword: true } }),
+    prisma.program.findMany({ where: { isOnlyOne: false }, select: { id: true, name: true, totalIssues: true, matchKeyword: true } }),
     prisma.branch.findMany({ select: { id: true, name: true } }),
     prisma.branchAlias.findMany({ select: { name: true, branchId: true } }),
     prisma.institution.findMany({ select: { id: true, name: true, branchId: true } }),

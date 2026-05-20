@@ -25,7 +25,7 @@ export default async function SalesPage({
 
   const [branches, programs, allInstitutions, oldestOrder] = await Promise.all([
     prisma.branch.findMany({ orderBy: { name: "asc" } }),
-    prisma.program.findMany({ orderBy: { id: "asc" } }),
+    prisma.program.findMany({ orderBy: { id: "asc" }, select: { id: true, name: true, totalIssues: true, isOnlyOne: true } }),
     prisma.institution.findMany({
       include: { branch: { select: { name: true } } },
       orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],

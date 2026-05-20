@@ -10,7 +10,7 @@ export default async function ErpRulesPage() {
   const [skipRules, mappings, programs] = await Promise.all([
     prisma.erpSkipRule.findMany({ orderBy: { id: "asc" } }),
     prisma.erpProductMapping.findMany({ orderBy: { id: "desc" }, include: { program: { select: { name: true } } } }),
-    prisma.program.findMany({ orderBy: { id: "asc" }, select: { id: true, name: true, matchKeyword: true } }),
+    prisma.program.findMany({ where: { isOnlyOne: false }, orderBy: { id: "asc" }, select: { id: true, name: true, matchKeyword: true } }),
   ]);
 
   return (
