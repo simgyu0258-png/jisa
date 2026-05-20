@@ -16,7 +16,8 @@
       "Bash(git push *)",
       "Bash(echo \"\" > \"c:/dev/jisa/src/app/branches/[id]/page.tsx\")",
       "Bash(node prisma/seed.js)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(npx tsc *)"
     ],
     "additionalDirectories": [
       "c:\\dev\\jisa\\src\\app\\branches\\[id]"

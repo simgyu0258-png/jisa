@@ -30,6 +30,7 @@ const menuGroups = [
     label: "시스템",
     items: [
       { href: "/upload", label: "자료 업데이트" },
+      { href: "/erp-rules", label: "ERP 규칙 관리" },
       { href: "/programs", label: "프로그램 관리" },
       { href: "/accounts", label: "계정 관리", masterOnly: true },
     ],

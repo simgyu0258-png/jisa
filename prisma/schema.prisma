@@ -41,9 +41,10 @@ model Program {
   id          Int                       @id @default(autoincrement())
   name        String
   totalIssues Int                       @default(12) @map("total_issues")
-  permissions BranchProgramPermission[]
-  orders      SaleOrder[]
-  targets     SalesTarget[]
+  permissions  BranchProgramPermission[]
+  orders       SaleOrder[]
+  targets      SalesTarget[]
+  erpMappings  ErpProductMapping[]
 
   @@map("programs")
 }
@@ -104,6 +105,24 @@ model SaleOrder {
   @@index([orderDate])
   @@index([issueNumber])
   @@map("sale_orders")
+}
+
+model ErpSkipRule {
+  id       Int     @id @default(autoincrement())
+  keyword1 String
+  keyword2 String?
+
+  @@map("erp_skip_rules")
+}
+
+model ErpProductMapping {
+  id          Int     @id @default(autoincrement())
+  productName String  @unique
+  programId   Int     @map("program_id")
+  issueNumber Int     @map("issue_number")
+  program     Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@map("erp_product_mappings")
 }
 
 model User {

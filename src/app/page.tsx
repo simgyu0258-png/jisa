@@ -50,6 +50,7 @@ export default async function HomePage() {
       }),
       prisma.saleOrder.groupBy({
         by: ["issueNumber"],
+        where: { orderDate: { gte: fyGte, lt: fyLt } },
         _sum: { quantity: true },
         orderBy: { issueNumber: "asc" },
       }),

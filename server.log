@@ -1,0 +1,73 @@
+
+> jisa@0.1.0 serve:stable
+> npm run build && npm run start:local
+
+
+> jisa@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.2.4 (webpack)
+- Environments: .env
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.4s
+  Running TypeScript ...
+  Finished TypeScript in 3.6s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/22) ...
+  Generating static pages using 15 workers (5/22) 
+  Generating static pages using 15 workers (10/22) 
+  Generating static pages using 15 workers (16/22) 
+✓ Generating static pages using 15 workers (22/22) in 2.8s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /accounts
+├ ƒ /analytics
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/branches/excel/apply
+├ ƒ /api/branches/excel/bulk-edit/apply
+├ ƒ /api/branches/excel/bulk-edit/download
+├ ƒ /api/branches/excel/bulk-edit/preview
+├ ƒ /api/branches/excel/preview
+├ ƒ /api/branches/excel/template
+├ ƒ /api/permissions/excel/apply
+├ ƒ /api/permissions/excel/preview
+├ ƒ /api/sales/download
+├ ƒ /api/sales/excel/apply
+├ ƒ /api/sales/excel/download
+├ ƒ /api/sales/excel/preview
+├ ƒ /api/sales/excel/template
+├ ƒ /api/sample-data
+├ ƒ /api/upload/erp/apply
+├ ƒ /api/upload/erp/preview
+├ ƒ /branches
+├ ƒ /branches/[id]
+├ ƒ /branches/bulk
+├ ƒ /branches/bulk-edit
+├ ƒ /branches/new
+├ ƒ /login
+├ ƒ /permissions
+├ ƒ /programs
+├ ƒ /sales
+├ ƒ /sales/bulk
+├ ƒ /sales/bulk-edit
+├ ƒ /targets
+└ ƒ /upload
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> jisa@0.1.0 start:local
+> next start -H 127.0.0.1 -p 3000
+
+▲ Next.js 16.2.4
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+✓ Ready in 131ms
