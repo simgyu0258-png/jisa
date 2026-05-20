@@ -70,8 +70,8 @@ export function BranchBulkUploadClient() {
             </button>
           </p>
           <p className="text-xs text-slate-400">
-            지사명이 있는 행이 새 지사 시작 · 지사명 없이 기관명만 입력하면 바로 위 지사의 기관으로 등록 ·
-            판매권한: 프로그램명 컬럼에 1(권한있음) / 0(권한없음)
+            지사명만 입력하면 메인 지사로 등록 · 지사명과 별칭을 함께 입력하면 해당 지사의 별칭으로 등록 ·
+            판매권한: 프로그램명 컬럼에 O(권한있음) / X(권한없음)
           </p>
           <form
             className="flex flex-wrap items-center gap-2"
@@ -132,7 +132,7 @@ export function BranchBulkUploadClient() {
                           {preview.programNames[id]}
                         </th>
                       ))}
-                      <th className="px-3 py-2 text-left font-medium">기관</th>
+                      <th className="px-3 py-2 text-left font-medium">사업자명 별칭</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -154,8 +154,8 @@ export function BranchBulkUploadClient() {
                           </td>
                         ))}
                         <td className="px-3 py-2 text-slate-600 text-xs">
-                          {row.institutions && row.institutions.length > 0
-                            ? row.institutions.join(", ")
+                          {row.aliases && row.aliases.length > 0
+                            ? row.aliases.join(", ")
                             : <span className="text-slate-300">-</span>}
                         </td>
                       </tr>

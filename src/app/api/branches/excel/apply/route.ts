@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     for (let i = 0; i < payload.length; i++) {
       const item = payload[i];
       const branchCode = `JS${String(startNumber + i).padStart(3, "0")}`;
-      await tx.branch.create({
+      const branch = await tx.branch.create({
         data: {
           branchCode,
           name: item.name,
@@ -40,15 +40,14 @@ export async function POST(request: Request) {
               isEnabled: item.permissions?.[p.id] ?? false,
             })),
           },
-          institutions: item.institutions && item.institutions.length > 0
-            ? { create: item.institutions.map((inst) => ({
-                name: typeof inst === "string" ? inst : inst.name,
-                phone: typeof inst === "string" ? null : inst.phone,
-                address: typeof inst === "string" ? null : inst.address,
-              })) }
-            : undefined,
         },
       });
+
+      if (item.aliases && item.aliases.length > 0) {
+        await tx.branchAlias.createMany({
+          data: item.aliases.map((name) => ({ branchId: branch.id, name })),
+        });
+      }
     }
   });
 

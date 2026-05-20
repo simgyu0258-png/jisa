@@ -4,8 +4,6 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 
-export type InstitutionRow = { name: string; phone: string | null; address: string | null };
-
 export type BranchPreviewRow = {
   name: string;
   region: string;
@@ -15,7 +13,7 @@ export type BranchPreviewRow = {
   address: string | null;
   memo: string | null;
   permissions: Record<number, boolean>;
-  institutions: InstitutionRow[];
+  aliases: string[];
 };
 
 export type BranchPreviewResponse = {
@@ -27,7 +25,7 @@ export type BranchPreviewResponse = {
 
 function isTruthy(value: unknown) {
   const s = String(value ?? "").trim().toLowerCase();
-  return s === "1" || s === "o" || s === "y" || s === "yes" || s === "true";
+  return s === "1" || s === "o" || s === "y" || s === "yes" || s === "true" || s === "x";
 }
 
 function col(row: Record<string, unknown>, ...keys: string[]) {
@@ -45,12 +43,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "파일이 없습니다." }, { status: 400 });
   }
 
-  const [programs, existingBranches] = await Promise.all([
+  const [programs, existingBranches, existingAliases] = await Promise.all([
     prisma.program.findMany({ orderBy: { id: "asc" } }),
     prisma.branch.findMany({ select: { name: true } }),
+    prisma.branchAlias.findMany({ select: { name: true } }),
   ]);
 
   const existingNames = new Set(existingBranches.map((b) => b.name));
+  const existingAliasNames = new Set(existingAliases.map((a) => a.name));
   const programByName = new Map(programs.map((p) => [p.name, p.id]));
   const programNames: Record<number, string> = Object.fromEntries(programs.map((p) => [p.id, p.name]));
 
@@ -62,27 +62,32 @@ export async function POST(request: Request) {
   const errors: Array<{ row: number; message: string }> = [];
   const payload: BranchPreviewRow[] = [];
   const seenNames = new Set<string>();
+  const seenAliases = new Set<string>();
 
   rows.forEach((row, index) => {
     const excelRow = index + 2;
     const name = col(row, "지사명*", "지사명");
-    const institutionName = col(row, "기관명");
-    const institutionPhone = col(row, "기관 연락처") || null;
-    const institutionAddress = col(row, "기관 주소") || null;
+    const alias = col(row, "별칭");
 
-    if (!name) {
-      // 지사명 없음 → 기관명이 있으면 직전 지사에 추가
-      if (institutionName && payload.length > 0) {
-        payload[payload.length - 1].institutions.push({
-          name: institutionName,
-          phone: institutionPhone,
-          address: institutionAddress,
-        });
+    if (!name) return;
+
+    // 별칭 행: 지사명 + 별칭 둘 다 있음
+    if (alias) {
+      const branch = payload.find((p) => p.name === name);
+      if (!branch) {
+        errors.push({ row: excelRow, message: `별칭 등록 전 지사가 먼저 있어야 합니다: ${name}` });
+        return;
       }
+      if (existingAliasNames.has(alias) || seenAliases.has(alias)) {
+        errors.push({ row: excelRow, message: `별칭 중복: ${alias}` });
+        return;
+      }
+      seenAliases.add(alias);
+      branch.aliases.push(alias);
       return;
     }
 
-    // 지사명 있음 → 새 지사
+    // 메인 지사 행
     const region = col(row, "지역*", "지역");
     const managerName = col(row, "지사 담당자*", "지사 담당자", "담당자*", "담당자");
     const phone = col(row, "지사 연락처*", "지사 연락처", "연락처*", "연락처");
@@ -117,9 +122,7 @@ export async function POST(request: Request) {
       address,
       memo,
       permissions,
-      institutions: institutionName
-        ? [{ name: institutionName, phone: institutionPhone, address: institutionAddress }]
-        : [],
+      aliases: [],
     });
   });
 
