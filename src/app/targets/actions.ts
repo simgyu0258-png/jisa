@@ -5,16 +5,16 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-async function requireMaster() {
+async function requireAuth() {
   const session = await auth();
-  if (!session || (session.user as { role?: string }).role !== "master") redirect("/");
+  if (!session) redirect("/login");
 }
 
 export async function saveTargetsAction(
   year: number,
   data: { branchId: number; programId: number; quantity: number }[],
 ) {
-  await requireMaster();
+  await requireAuth();
   await prisma.$transaction(
     data.map((d) =>
       prisma.salesTarget.upsert({

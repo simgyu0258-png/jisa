@@ -12,7 +12,7 @@ export default async function TargetsPage({
   searchParams: Promise<Params>;
 }) {
   const [session, params] = await Promise.all([auth(), searchParams]);
-  if (!session || (session.user as { role?: string }).role !== "master") redirect("/");
+  if (!session) redirect("/login");
 
   const currentYear = getCurrentFiscalYear();
   const year = params.year ? Number(params.year) : currentYear;

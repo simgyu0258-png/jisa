@@ -5,16 +5,35 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { signOut } from "next-auth/react";
 
-const menus = [
-  { href: "/", label: "대시보드", masterOnly: false },
-  { href: "/branches", label: "지사 관리", masterOnly: false },
-  { href: "/permissions", label: "판매권한 조회", masterOnly: false },
-  { href: "/sales", label: "판매부수 조회 및 관리", masterOnly: false },
-  { href: "/analytics", label: "판매 분석", masterOnly: false },
-  { href: "/targets", label: "목표 관리", masterOnly: true },
-  { href: "/upload", label: "자료 업데이트", masterOnly: false },
-  { href: "/programs", label: "프로그램 관리", masterOnly: true },
-  { href: "/accounts", label: "계정 관리", masterOnly: true },
+const menuGroups = [
+  {
+    items: [
+      { href: "/", label: "대시보드" },
+    ],
+  },
+  {
+    label: "판매",
+    items: [
+      { href: "/sales", label: "판매 현황" },
+      { href: "/analytics", label: "판매 분석" },
+    ],
+  },
+  {
+    label: "지사",
+    items: [
+      { href: "/branches", label: "지사 관리" },
+      { href: "/permissions", label: "판매권한 관리" },
+      { href: "/targets", label: "목표 관리" },
+      { href: "/upload", label: "자료 업데이트" },
+    ],
+  },
+  {
+    label: "시스템",
+    items: [
+      { href: "/programs", label: "프로그램 관리" },
+      { href: "/accounts", label: "계정 관리", masterOnly: true },
+    ],
+  },
 ];
 
 type Props = {
@@ -27,29 +46,39 @@ export function MainNav({ userName, userRole }: Props) {
   const isMaster = userRole === "master";
 
   return (
-    <aside className="w-full border-b border-slate-200 bg-white lg:w-64 lg:border-b-0 lg:border-r lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen">
-      <div className="px-6 py-5 text-lg font-bold text-slate-900">지사 관리 시스템</div>
-      <nav className="flex gap-2 px-4 pb-4 lg:flex-col lg:flex-1">
-        {menus.filter((m) => !m.masterOnly || isMaster).map((menu) => {
-          const active =
-            currentPath === menu.href ||
-            (menu.href !== "/" && currentPath.startsWith(menu.href));
-
-          return (
-            <Link
-              className={clsx(
-                "rounded-md px-4 py-2 text-sm font-medium",
-                active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100",
-              )}
-              href={menu.href}
-              key={menu.href}
-            >
-              {menu.label}
-            </Link>
-          );
-        })}
+    <aside className="w-full border-b border-slate-200 bg-white lg:w-56 lg:border-b-0 lg:border-r lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen">
+      <div className="px-5 py-5 text-base font-bold text-slate-900">지사 관리 시스템</div>
+      <nav className="flex gap-1 px-3 pb-4 lg:flex-col lg:flex-1">
+        {menuGroups.map((group, gi) => (
+          <div key={gi} className={clsx("lg:space-y-0.5", gi > 0 && "lg:mt-4")}>
+            {group.label && (
+              <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                {group.label}
+              </div>
+            )}
+            {group.items
+              .filter((item) => !("masterOnly" in item && item.masterOnly) || isMaster)
+              .map((item) => {
+                const active =
+                  currentPath === item.href ||
+                  (item.href !== "/" && currentPath.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={clsx(
+                      "block rounded-md px-3 py-2 text-sm font-medium",
+                      active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+          </div>
+        ))}
       </nav>
-      <div className="border-t border-slate-100 px-4 py-4">
+      <div className="border-t border-slate-100 px-3 py-4">
         <div className="mb-2 px-2 text-xs text-slate-500">
           {userName}
           <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-600">
@@ -57,7 +86,7 @@ export function MainNav({ userName, userRole }: Props) {
           </span>
         </div>
         <button
-          className="w-full rounded-md px-4 py-2 text-left text-sm text-slate-500 hover:bg-slate-100"
+          className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-100"
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           로그아웃
