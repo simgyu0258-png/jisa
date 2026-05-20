@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { updateBranchInfoAction, updatePermissionsAction } from "./actions";
+import { updateBranchInfoAction, updatePermissionsAction, addBranchAliasAction, deleteBranchAliasAction } from "./actions";
 import { SavedToast } from "@/components/saved-toast";
 
 export default async function BranchDetailPage({
@@ -19,6 +19,7 @@ export default async function BranchDetailPage({
       where: { id: branchId },
       include: {
         permissions: { include: { program: true }, orderBy: { programId: "asc" } },
+        aliases: { orderBy: { id: "asc" } },
       },
     }),
     prisma.program.findMany({ orderBy: { id: "asc" } }),
@@ -86,6 +87,32 @@ export default async function BranchDetailPage({
           </div>
           <div><button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">저장</button></div>
         </form>
+      </section>
+
+      {/* 사업자명 별칭 */}
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h2 className="font-semibold text-slate-800">사업자명 별칭</h2>
+          <p className="mt-0.5 text-xs text-slate-400">ERP 파일의 거래처명이 지사명과 다를 경우 등록하세요.</p>
+        </div>
+        <div className="p-5 space-y-3">
+          {branch.aliases.length > 0 && (
+            <ul className="space-y-1">
+              {branch.aliases.map((alias) => (
+                <li key={alias.id} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 rounded bg-slate-50 px-3 py-1.5 text-slate-700">{alias.name}</span>
+                  <form action={deleteBranchAliasAction.bind(null, branchId, alias.id)}>
+                    <button className="text-slate-400 hover:text-rose-500 px-1" type="submit">삭제</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form action={addBranchAliasAction.bind(null, branchId)} className="flex gap-2">
+            <input className="min-w-0 flex-1" name="aliasName" placeholder="추가할 사업자명 입력" />
+            <button className="shrink-0 rounded-md bg-slate-900 px-4 py-2 text-sm text-white" type="submit">추가</button>
+          </form>
+        </div>
       </section>
 
       {/* 판매권한 관리 */}

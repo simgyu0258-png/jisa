@@ -55,13 +55,15 @@ export async function POST(req: NextRequest) {
 
   const col = (name: string) => headerMap[name] ?? -1;
 
-  const [programs, branches, institutions] = await Promise.all([
+  const [programs, branches, aliases, institutions] = await Promise.all([
     prisma.program.findMany({ select: { id: true, name: true } }),
     prisma.branch.findMany({ select: { id: true, name: true } }),
+    prisma.branchAlias.findMany({ select: { name: true, branchId: true } }),
     prisma.institution.findMany({ select: { id: true, name: true, branchId: true } }),
   ]);
 
   const branchMap = new Map(branches.map((b) => [b.name, b.id]));
+  for (const alias of aliases) branchMap.set(alias.name, alias.branchId);
   const instMap = new Map(institutions.map((i) => [`${i.branchId}-${i.name}`, i.id]));
 
   // (지사|기관|programId|호) → 집계

@@ -5,6 +5,20 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+export async function addBranchAliasAction(branchId: number, formData: FormData) {
+  await requireAuth();
+  const name = String(formData.get("aliasName") || "").trim();
+  if (!name) return;
+  await prisma.branchAlias.create({ data: { branchId, name } });
+  revalidatePath(`/branches/${branchId}`);
+}
+
+export async function deleteBranchAliasAction(branchId: number, aliasId: number) {
+  await requireAuth();
+  await prisma.branchAlias.delete({ where: { id: aliasId } });
+  revalidatePath(`/branches/${branchId}`);
+}
+
 async function requireAuth() {
   const session = await auth();
   if (!session) redirect("/login");

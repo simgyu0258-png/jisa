@@ -23,8 +23,18 @@ model Branch {
   permissions  BranchProgramPermission[]
   institutions Institution[]
   targets      SalesTarget[]
+  aliases      BranchAlias[]
 
   @@map("branches")
+}
+
+model BranchAlias {
+  id       Int    @id @default(autoincrement())
+  branchId Int    @map("branch_id")
+  name     String @unique
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("branch_aliases")
 }
 
 model Program {
