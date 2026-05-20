@@ -19,7 +19,7 @@ export default async function TargetsPage({
 
   const [branches, programs, targets, prevTargets, oldestOrder, permissions, onlyOneTargets, prevOnlyOneTargets] = await Promise.all([
     prisma.branch.findMany({ where: { status: "active" }, orderBy: { name: "asc" } }),
-    prisma.program.findMany({ orderBy: { id: "asc" } }),
+    prisma.program.findMany({ where: { name: { not: { contains: "온리원" } } }, orderBy: { id: "asc" } }),
     prisma.salesTarget.findMany({ where: { year } }),
     prisma.salesTarget.findMany({ where: { year: year - 1 } }),
     prisma.saleOrder.findFirst({ orderBy: { orderDate: "asc" }, select: { orderDate: true } }),

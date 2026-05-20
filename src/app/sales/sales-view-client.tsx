@@ -318,6 +318,8 @@ export function SalesViewClient({
 
       {/* 목표 현황: 행=지사, 열=프로그램, 셀=실적/목표/달성률 */}
       {view === "target" && (() => {
+        // 온리원키즈포스쿨은 별도 컬럼으로 관리
+        const targetPrograms = programs.filter((p) => !p.name.includes("온리원"));
         // 집계 (권한 없는 프로그램은 목표 0으로 처리)
         const permSet = new Set(targetPermissions.map((p) => `${p.branchId}-${p.programId}`));
         const targetMap = new Map<string, number>();
@@ -351,7 +353,7 @@ export function SalesViewClient({
               <thead className="bg-slate-100">
                 <tr>
                   <th className="px-3 py-2 text-left">지사</th>
-                  {programs.map((p) => (
+                  {targetPrograms.map((p) => (
                     <th className="px-3 py-2 text-center whitespace-nowrap" key={p.id}>{p.name}</th>
                   ))}
                   <th className="px-3 py-2 text-center whitespace-nowrap border-l border-slate-200 bg-slate-200">온리원</th>
@@ -360,17 +362,17 @@ export function SalesViewClient({
               </thead>
               <tbody>
                 {visibleBranches.length === 0 && (
-                  <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={programs.length + 1}>데이터가 없습니다.</td></tr>
+                  <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={targetPrograms.length + 3}>데이터가 없습니다.</td></tr>
                 )}
                 {visibleBranches.map((branch) => {
                   const ooTarget = ooTargetMap.get(branch.id) ?? 0;
                   const ooActual = ooActualMap.get(branch.id) ?? 0;
                   const ooRate = ooTarget > 0 ? (ooActual / ooTarget) * 100 : null;
-                  const totalActual = programs.reduce((s, p) => {
+                  const totalActual = targetPrograms.reduce((s, p) => {
                     const key = `${branch.id}-${p.id}`;
                     return permSet.has(key) ? s + (actualMap.get(key) ?? 0) : s;
                   }, 0) + ooActual;
-                  const totalTarget = programs.reduce((s, p) => {
+                  const totalTarget = targetPrograms.reduce((s, p) => {
                     const key = `${branch.id}-${p.id}`;
                     return permSet.has(key) ? s + (targetMap.get(key) ?? 0) : s;
                   }, 0) + ooTarget;
@@ -378,7 +380,7 @@ export function SalesViewClient({
                   return (
                     <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
                       <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
-                      {programs.map((p) => {
+                      {targetPrograms.map((p) => {
                         const key = `${branch.id}-${p.id}`;
                         const hasPerm = permSet.has(key);
                         const actual = actualMap.get(key) ?? 0;
