@@ -17,7 +17,6 @@ const menuGroups = [
       { href: "/branches", label: "지사 관리" },
       { href: "/permissions", label: "판매권한 관리" },
       { href: "/targets", label: "목표 관리" },
-      { href: "/upload", label: "자료 업데이트" },
     ],
   },
   {
@@ -30,6 +29,7 @@ const menuGroups = [
   {
     label: "시스템",
     items: [
+      { href: "/upload", label: "자료 업데이트" },
       { href: "/programs", label: "프로그램 관리" },
       { href: "/accounts", label: "계정 관리", masterOnly: true },
     ],
