@@ -38,9 +38,10 @@ model BranchAlias {
 }
 
 model Program {
-  id          Int                       @id @default(autoincrement())
-  name        String
-  totalIssues Int                       @default(12) @map("total_issues")
+  id           Int                       @id @default(autoincrement())
+  name         String
+  totalIssues  Int                       @default(12) @map("total_issues")
+  matchKeyword String?                   @map("match_keyword")
   permissions  BranchProgramPermission[]
   orders       SaleOrder[]
   targets      SalesTarget[]

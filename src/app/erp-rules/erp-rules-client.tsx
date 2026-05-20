@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { addSkipRuleAction, deleteSkipRuleAction, updateMappingAction, deleteMappingAction } from "./actions";
+import { addSkipRuleAction, deleteSkipRuleAction, updateMappingAction, deleteMappingAction, updateProgramKeywordAction } from "./actions";
 
 type SkipRule = { id: number; keyword1: string; keyword2: string | null };
 type Mapping = { id: number; productName: string; programId: number; issueNumber: number };
-type Program = { id: number; name: string };
+type Program = { id: number; name: string; matchKeyword: string | null };
 
 export function ErpRulesClient({
   skipRules, mappings, programs,
@@ -14,10 +14,13 @@ export function ErpRulesClient({
   mappings: Mapping[];
   programs: Program[];
 }) {
-  const [tab, setTab] = useState<"skip" | "mapping">("skip");
+  const [tab, setTab] = useState<"skip" | "mapping" | "keyword">("skip");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editProgram, setEditProgram] = useState(0);
   const [editIssue, setEditIssue] = useState(0);
+  const [keywordEdits, setKeywordEdits] = useState<Record<number, string>>(
+    Object.fromEntries(programs.map((p) => [p.id, p.matchKeyword ?? ""]))
+  );
 
   function startEdit(m: Mapping) {
     setEditingId(m.id);
@@ -39,6 +42,10 @@ export function ErpRulesClient({
           className={`px-4 py-2 text-sm font-medium ${tab === "skip" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
           onClick={() => setTab("skip")}
         >제외 규칙</button>
+        <button
+          className={`px-4 py-2 text-sm font-medium border-l border-slate-200 ${tab === "keyword" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+          onClick={() => setTab("keyword")}
+        >자동 매핑 기준</button>
         <button
           className={`px-4 py-2 text-sm font-medium border-l border-slate-200 ${tab === "mapping" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
           onClick={() => setTab("mapping")}
@@ -78,6 +85,52 @@ export function ErpRulesClient({
               <input className="min-w-0 flex-1" name="keyword2" placeholder="키워드2 (선택)" />
               <button className="shrink-0 rounded-md bg-slate-900 px-4 py-2 text-sm text-white" type="submit">추가</button>
             </form>
+          </div>
+        </section>
+      )}
+
+      {tab === "keyword" && (
+        <section className="rounded-lg border border-slate-200 bg-white">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h2 className="font-semibold text-slate-800">자동 매핑 기준</h2>
+            <p className="mt-0.5 text-xs text-slate-400">
+              품목명에 해당 키워드가 포함되면 자동으로 프로그램으로 인식합니다. 비워두면 프로그램명을 그대로 사용합니다.
+              호수는 품목명의 <span className="font-mono">숫자+호</span> 형식으로 자동 추출됩니다.
+            </p>
+          </div>
+          <div className="p-5">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">프로그램명</th>
+                  <th className="px-3 py-2 text-left font-medium">매핑 키워드</th>
+                  <th className="px-3 py-2 text-left font-medium w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {programs.map((p) => (
+                  <tr className="border-t border-slate-100" key={p.id}>
+                    <td className="px-3 py-2 font-medium text-slate-700">{p.name}</td>
+                    <td className="px-3 py-2">
+                      <input
+                        className="w-full text-sm"
+                        placeholder={p.name}
+                        value={keywordEdits[p.id] ?? ""}
+                        onChange={(e) => setKeywordEdits((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <button
+                        className="rounded bg-slate-900 px-3 py-1 text-xs text-white"
+                        onClick={() => updateProgramKeywordAction(p.id, keywordEdits[p.id] ?? "")}
+                      >
+                        저장
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}

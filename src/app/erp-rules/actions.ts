@@ -39,3 +39,12 @@ export async function deleteMappingAction(id: number) {
   await prisma.erpProductMapping.delete({ where: { id } });
   revalidatePath("/erp-rules");
 }
+
+export async function updateProgramKeywordAction(programId: number, keyword: string) {
+  await requireAuth();
+  await prisma.program.update({
+    where: { id: programId },
+    data: { matchKeyword: keyword.trim() || null },
+  });
+  revalidatePath("/erp-rules");
+}

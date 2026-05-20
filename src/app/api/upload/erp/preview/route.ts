@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const col = (name: string) => headerMap[name] ?? -1;
 
   const [programs, branches, aliases, institutions, skipRules, productMappings] = await Promise.all([
-    prisma.program.findMany({ select: { id: true, name: true, totalIssues: true } }),
+    prisma.program.findMany({ select: { id: true, name: true, totalIssues: true, matchKeyword: true } }),
     prisma.branch.findMany({ select: { id: true, name: true } }),
     prisma.branchAlias.findMany({ select: { name: true, branchId: true } }),
     prisma.institution.findMany({ select: { id: true, name: true, branchId: true } }),
@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
   }
 
   function matchProgram(name: string) {
-    const sorted = [...programs].sort((a, b) => b.name.length - a.name.length);
-    return sorted.find((p) => name.includes(p.name)) ?? null;
+    const sorted = [...programs].sort((a, b) => (b.matchKeyword ?? b.name).length - (a.matchKeyword ?? a.name).length);
+    return sorted.find((p) => name.includes(p.matchKeyword ?? p.name)) ?? null;
   }
 
   // 집계 맵
