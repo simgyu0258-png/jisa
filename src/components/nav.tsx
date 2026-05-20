@@ -12,19 +12,19 @@ const menuGroups = [
     ],
   },
   {
-    label: "판매",
-    items: [
-      { href: "/sales", label: "판매 현황" },
-      { href: "/analytics", label: "판매 분석" },
-    ],
-  },
-  {
     label: "지사",
     items: [
       { href: "/branches", label: "지사 관리" },
       { href: "/permissions", label: "판매권한 관리" },
       { href: "/targets", label: "목표 관리" },
       { href: "/upload", label: "자료 업데이트" },
+    ],
+  },
+  {
+    label: "판매",
+    items: [
+      { href: "/sales", label: "판매 현황" },
+      { href: "/analytics", label: "판매 분석" },
     ],
   },
   {
