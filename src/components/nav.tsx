@@ -23,6 +23,7 @@ const menuGroups = [
     label: "판매",
     items: [
       { href: "/sales", label: "판매 현황" },
+      { href: "/only-one", label: "온리원 현황" },
       { href: "/analytics", label: "판매 분석" },
     ],
   },

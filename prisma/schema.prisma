@@ -20,10 +20,11 @@ model Branch {
   memo         String?
   createdAt    DateTime                  @default(now()) @map("created_at")
   updatedAt    DateTime                  @updatedAt @map("updated_at")
-  permissions  BranchProgramPermission[]
-  institutions Institution[]
-  targets      SalesTarget[]
-  aliases      BranchAlias[]
+  permissions      BranchProgramPermission[]
+  institutions     Institution[]
+  targets          SalesTarget[]
+  aliases          BranchAlias[]
+  onlyOneTargets   OnlyOneTarget[]
 
   @@map("branches")
 }
@@ -85,8 +86,9 @@ model Institution {
   memo      String?
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
-  branch    Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  orders    SaleOrder[]
+  branch           Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  orders           SaleOrder[]
+  onlyOneContracts OnlyOneContract[]
 
   @@map("institutions")
 }
@@ -106,6 +108,29 @@ model SaleOrder {
   @@index([orderDate])
   @@index([issueNumber])
   @@map("sale_orders")
+}
+
+model OnlyOneContract {
+  id            Int         @id @default(autoincrement())
+  institutionId Int         @map("institution_id")
+  classCount    Int         @map("class_count")
+  startDate     String      @map("start_date")
+  endDate       String?     @map("end_date")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@map("only_one_contracts")
+}
+
+model OnlyOneTarget {
+  id         Int    @id @default(autoincrement())
+  branchId   Int    @map("branch_id")
+  year       Int
+  classCount Int    @map("class_count")
+  branch     Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, year])
+  @@map("only_one_targets")
 }
 
 model ErpSkipRule {

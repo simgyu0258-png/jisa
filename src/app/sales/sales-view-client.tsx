@@ -13,6 +13,8 @@ type IssueOrder = { institutionId: number; programId: number; issueNumber: numbe
 type SalesTarget = { branchId: number; programId: number; quantity: number };
 type TargetActualOrder = { institutionId: number; programId: number; quantity: number };
 type TargetPermission = { branchId: number; programId: number };
+type OnlyOneTarget = { branchId: number; classCount: number };
+type OnlyOneContract = { branchId: number; classCount: number };
 type InstitutionOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
 
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
@@ -20,7 +22,7 @@ type IssueModalCell = { branchId: number; branchName: string; issueNumber: numbe
 
 export function SalesViewClient({
   branches, programs, allInstitutions,
-  monthlyOrders, issueOrders, salesTargets, targetActualOrders, targetPermissions, institutionOrders,
+  monthlyOrders, issueOrders, salesTargets, targetActualOrders, targetPermissions, onlyOneTargets, onlyOneContracts, institutionOrders,
   view, selectedBranchId, selectedYear, minYear, fiscalYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
@@ -32,6 +34,8 @@ export function SalesViewClient({
   salesTargets: SalesTarget[];
   targetActualOrders: TargetActualOrder[];
   targetPermissions: TargetPermission[];
+  onlyOneTargets: OnlyOneTarget[];
+  onlyOneContracts: OnlyOneContract[];
   institutionOrders: InstitutionOrder[];
   view: "monthly" | "issue" | "target" | "institution";
   selectedBranchId?: number;
@@ -328,6 +332,11 @@ export function SalesViewClient({
           const key = `${bid}-${o.programId}`;
           actualMap.set(key, (actualMap.get(key) ?? 0) + o.quantity);
         }
+        const ooTargetMap = new Map(onlyOneTargets.map((t) => [t.branchId, t.classCount]));
+        const ooActualMap = new Map<number, number>();
+        for (const c of onlyOneContracts) {
+          ooActualMap.set(c.branchId, (ooActualMap.get(c.branchId) ?? 0) + c.classCount);
+        }
 
         function rateColor(rate: number | null) {
           if (rate === null) return "text-slate-400";
@@ -345,6 +354,7 @@ export function SalesViewClient({
                   {programs.map((p) => (
                     <th className="px-3 py-2 text-center whitespace-nowrap" key={p.id}>{p.name}</th>
                   ))}
+                  <th className="px-3 py-2 text-center whitespace-nowrap border-l border-slate-200 bg-slate-200">온리원</th>
                   <th className="px-3 py-2 text-center font-semibold whitespace-nowrap">합계</th>
                 </tr>
               </thead>
@@ -353,14 +363,17 @@ export function SalesViewClient({
                   <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={programs.length + 1}>데이터가 없습니다.</td></tr>
                 )}
                 {visibleBranches.map((branch) => {
+                  const ooTarget = ooTargetMap.get(branch.id) ?? 0;
+                  const ooActual = ooActualMap.get(branch.id) ?? 0;
+                  const ooRate = ooTarget > 0 ? (ooActual / ooTarget) * 100 : null;
                   const totalActual = programs.reduce((s, p) => {
                     const key = `${branch.id}-${p.id}`;
                     return permSet.has(key) ? s + (actualMap.get(key) ?? 0) : s;
-                  }, 0);
+                  }, 0) + ooActual;
                   const totalTarget = programs.reduce((s, p) => {
                     const key = `${branch.id}-${p.id}`;
                     return permSet.has(key) ? s + (targetMap.get(key) ?? 0) : s;
-                  }, 0);
+                  }, 0) + ooTarget;
                   const totalRate = totalTarget > 0 ? (totalActual / totalTarget) * 100 : null;
                   return (
                     <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
@@ -388,6 +401,16 @@ export function SalesViewClient({
                           </td>
                         );
                       })}
+                      <td className="px-3 py-2 text-center border-l border-slate-200 bg-slate-50">
+                        {ooTarget === 0 ? (
+                          <span className="text-slate-400">-</span>
+                        ) : (
+                          <>
+                            <div className={`font-semibold ${rateColor(ooRate)}`}>{ooRate !== null ? `${ooRate.toFixed(1)}%` : "-"}</div>
+                            <div className="text-xs text-slate-400 mt-0.5">{ooActual} / {ooTarget}</div>
+                          </>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-center border-l border-slate-200">
                         {totalTarget === 0 ? (
                           <span className="text-slate-400">-</span>

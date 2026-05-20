@@ -69,6 +69,17 @@ export default async function SalesPage({
       })
     : [];
 
+  const onlyOneTargets = view === "target"
+    ? await prisma.onlyOneTarget.findMany({ where: { year: Number(year) } })
+    : [];
+
+  const onlyOneContracts = view === "target"
+    ? await prisma.onlyOneContract.findMany({
+        where: { startDate: { lt }, OR: [{ endDate: null }, { endDate: { gte } }] },
+        select: { classCount: true, institution: { select: { branchId: true } } },
+      })
+    : [];
+
   const institutionOrders = view === "institution"
     ? await prisma.saleOrder.findMany({
         where: {
@@ -97,6 +108,8 @@ export default async function SalesPage({
         salesTargets={salesTargets}
         targetActualOrders={targetActualOrders}
         targetPermissions={targetPermissions}
+        onlyOneTargets={onlyOneTargets}
+        onlyOneContracts={onlyOneContracts.map((c) => ({ classCount: c.classCount, branchId: c.institution.branchId }))}
         institutionOrders={institutionOrders}
         view={view}
         selectedBranchId={branchId}

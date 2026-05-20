@@ -26,3 +26,20 @@ export async function saveTargetsAction(
   );
   revalidatePath("/targets");
 }
+
+export async function saveOnlyOneTargetsAction(
+  year: number,
+  data: { branchId: number; classCount: number }[],
+) {
+  await requireAuth();
+  await prisma.$transaction(
+    data.map((d) =>
+      prisma.onlyOneTarget.upsert({
+        where: { branchId_year: { branchId: d.branchId, year } },
+        create: { branchId: d.branchId, year, classCount: d.classCount },
+        update: { classCount: d.classCount },
+      }),
+    ),
+  );
+  revalidatePath("/targets");
+}
