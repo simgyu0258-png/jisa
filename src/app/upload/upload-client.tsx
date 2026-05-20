@@ -63,7 +63,7 @@ function ErpUpload({ onDone }: { onDone: () => void }) {
     if (!preview || preview.payload.length === 0) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/sales/excel/apply", {
+      const res = await fetch("/api/upload/erp/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payload: preview.payload }),
@@ -87,7 +87,7 @@ function ErpUpload({ onDone }: { onDone: () => void }) {
           <h2 className="font-semibold text-slate-800">ERP 파일 업로드</h2>
           <p className="mt-1 text-xs text-slate-400">
             ERP에서 다운로드한 엑셀 파일을 그대로 업로드하세요.
-            워크북 항목은 자동으로 제외되며, 동일 기관·프로그램·호의 수량은 합산됩니다.
+            워크북 항목은 자동으로 제외되며, 동일 기관·프로그램·호·주문일의 수량은 최신 자료로 교체됩니다.
           </p>
         </div>
         <div className="p-5">

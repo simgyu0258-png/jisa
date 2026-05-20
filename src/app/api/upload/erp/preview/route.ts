@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import type { SaleOrderPreviewRow, SaleOrderPreviewResponse } from "@/app/api/sales/excel/preview/route";
 
 function isSkipped(name: string) {
   if (name.includes("워크북")) return true;
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }) as unknown[][];
 
-  // 헤더 행 탐색 (거래처명이 있는 행)
+  // 헤더 행 탐색
   let headerRowIdx = -1;
   const headerMap: Record<string, number> = {};
   for (let i = 0; i < Math.min(rows.length, 6); i++) {
@@ -64,13 +65,13 @@ export async function POST(req: NextRequest) {
 
   const branchMap = new Map(branches.map((b) => [b.name, b.id]));
   for (const alias of aliases) branchMap.set(alias.name, alias.branchId);
-  const instMap = new Map(institutions.map((i) => [`${i.branchId}-${i.name}`, i.id]));
 
-  // (지사|기관|programId|호) → 집계
-  const aggMap = new Map<string, {
-    branchName: string; institutionName: string; programName: string;
-    issueNumber: number; orderDate: string; quantity: number;
-  }>();
+  const instMap = new Map(institutions.map((i) => [`${i.branchId}::${i.name}`, i.id]));
+  const newInstTemp = new Map<string, number>();
+  let tempId = -1;
+
+  // (institutionId|programId|issueNumber|orderDate) → 집계
+  const aggMap = new Map<string, SaleOrderPreviewRow>();
 
   const errors: { row: number; message: string }[] = [];
   let skipped = 0;
@@ -105,34 +106,52 @@ export async function POST(req: NextRequest) {
       errors.push({ row: headerRowIdx + i + 2, message: `주문일자 형식 오류: ${row[col("주문일자")]}` });
       continue;
     }
-    if (!branchMap.has(branchName)) {
+
+    const branchId = branchMap.get(branchName);
+    if (!branchId) {
       errors.push({ row: headerRowIdx + i + 2, message: `등록되지 않은 지사: ${branchName}` });
       continue;
     }
 
-    const key = `${branchName}|${instName}|${program.id}|${issue}`;
-    const existing = aggMap.get(key);
+    const instKey = `${branchId}::${instName}`;
+    let institutionId = instMap.get(instKey);
+    let isNew = false;
+    if (!institutionId) {
+      if (!newInstTemp.has(instKey)) newInstTemp.set(instKey, tempId--);
+      institutionId = newInstTemp.get(instKey)!;
+      isNew = true;
+    }
+
+    const aggKey = `${institutionId}|${program.id}|${issue}|${orderDate}`;
+    const existing = aggMap.get(aggKey);
     if (existing) {
       existing.quantity += qty;
     } else {
-      aggMap.set(key, { branchName, institutionName: instName, programName: program.name, issueNumber: issue, orderDate, quantity: qty });
+      aggMap.set(aggKey, {
+        institutionId,
+        institutionName: instName,
+        branchName,
+        branchId,
+        programId: program.id,
+        programName: program.name,
+        issueNumber: issue,
+        orderDate,
+        quantity: qty,
+        isNewInstitution: isNew,
+      });
     }
   }
 
-  const payload = [...aggMap.values()].map((agg) => {
-    const branchId = branchMap.get(agg.branchName)!;
-    const isNew = !instMap.has(`${branchId}-${agg.institutionName}`);
-    return { ...agg, isNewInstitution: isNew };
-  });
+  const payload = [...aggMap.values()];
 
   return NextResponse.json({
-    payload,
-    errors,
     summary: {
       totalRows: dataRows.filter((r) => String((r as unknown[])[col("품목명")] ?? "").trim()).length,
       validRows: payload.length,
       errorRows: errors.length,
       skippedRows: skipped,
     },
-  });
+    errors,
+    payload,
+  } satisfies SaleOrderPreviewResponse & { summary: { skippedRows: number } });
 }
