@@ -120,7 +120,7 @@ export function TargetsClient({
           <tbody>
             {visibleBranches.map((branch) => {
               const values = programs.map((p) => targets[`${branch.id}-${p.id}`] ?? 0);
-              const total = values.reduce((s, v) => s + v, 0);
+              const total = programs.reduce((s, p) => enabledSet.has(`${branch.id}-${p.id}`) ? s + (targets[`${branch.id}-${p.id}`] ?? 0) : s, 0);
               return (
                 <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
                   <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{branch.name}</td>
@@ -148,11 +148,7 @@ export function TargetsClient({
                               </div>
                             )}
                           </>
-                        ) : current > 0 ? (
-                          <div className="text-center text-sm text-slate-400">{current.toLocaleString()}</div>
-                        ) : (
-                          <div className="text-center text-slate-300">—</div>
-                        )}
+                        ) : null}
                       </td>
                     );
                   })}
@@ -165,11 +161,11 @@ export function TargetsClient({
             <tr>
               <td className="px-3 py-2">합계</td>
               {programs.map((p) => {
-                const total = visibleBranches.reduce((s, b) => s + (targets[`${b.id}-${p.id}`] ?? 0), 0);
+                const total = visibleBranches.reduce((s, b) => enabledSet.has(`${b.id}-${p.id}`) ? s + (targets[`${b.id}-${p.id}`] ?? 0) : s, 0);
                 return <td className="px-2 py-2 text-center" key={p.id}>{total.toLocaleString()}</td>;
               })}
               <td className="px-2 py-2 text-center">
-                {visibleBranches.reduce((s, b) => s + programs.reduce((ss, p) => ss + (targets[`${b.id}-${p.id}`] ?? 0), 0), 0).toLocaleString()}
+                {visibleBranches.reduce((s, b) => s + programs.reduce((ss, p) => enabledSet.has(`${b.id}-${p.id}`) ? ss + (targets[`${b.id}-${p.id}`] ?? 0) : ss, 0), 0).toLocaleString()}
               </td>
             </tr>
           </tfoot>
