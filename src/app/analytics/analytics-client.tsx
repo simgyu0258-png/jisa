@@ -49,7 +49,7 @@ export function AnalyticsClient({
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(LS_KEY);
+      const saved = sessionStorage.getItem(LS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as CardConfig[];
         if (Array.isArray(parsed) && parsed.length > 0) setCards(parsed);
@@ -59,7 +59,7 @@ export function AnalyticsClient({
   }, []);
 
   useEffect(() => {
-    if (ready) localStorage.setItem(LS_KEY, JSON.stringify(cards));
+    if (ready) sessionStorage.setItem(LS_KEY, JSON.stringify(cards));
   }, [cards, ready]);
 
   function addCard() { setCards((p) => [...p, newCard()]); }
