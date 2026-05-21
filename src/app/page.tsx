@@ -10,6 +10,22 @@ function percentChange(current: number, previous: number) {
   return ((current - previous) / previous) * 100;
 }
 
+type OoContract = { classCount: number; startDate: string; endDate: string | null };
+
+function ooActiveClasses(contracts: OoContract[], yearMonth: string): number {
+  const first = `${yearMonth}-01`;
+  const last = `${yearMonth}-31`;
+  return contracts
+    .filter(c => c.startDate <= last && (c.endDate === null || c.endDate >= first))
+    .reduce((s, c) => s + c.classCount, 0);
+}
+
+function issueToYM(issue: number, fiscalYear: number): string {
+  const month = issue + 2;
+  if (month <= 12) return `${fiscalYear}-${String(month).padStart(2, "0")}`;
+  return `${fiscalYear + 1}-${String(month - 12).padStart(2, "0")}`;
+}
+
 export default async function HomePage() {
   const currentMonth = getCurrentYearMonth();
   const previousMonth = getPreviousYearMonth(currentMonth);
@@ -22,9 +38,11 @@ export default async function HomePage() {
   const currentIssue = getCurrentFiscalIssue();
   const prevIssue = currentIssue - 1;
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const [programs, currentByProgram, currentTotal, previousTotal, lastYearTotal, allRecent, byIssue,
     yearTargets, yearOrders, branches, activePermissions,
-    ooTargets, ooContracts,
+    ooTargets, allOoContracts,
     currentIssueTotal, prevIssueTotal, sameIssueLastYear] =
     await Promise.all([
       prisma.program.findMany({ orderBy: { id: "asc" } }),
@@ -64,58 +82,79 @@ export default async function HomePage() {
       prisma.branchProgramPermission.findMany({ where: { isEnabled: true }, select: { branchId: true, programId: true } }),
       prisma.onlyOneTarget.findMany({ where: { year: currentYear } }),
       prisma.onlyOneContract.findMany({
-        where: {
-          startDate: { lte: new Date().toISOString().slice(0, 10) },
-          OR: [{ endDate: null }, { endDate: { gte: new Date().toISOString().slice(0, 10) } }],
-        },
-        select: { classCount: true, institution: { select: { branchId: true } } },
+        select: { classCount: true, startDate: true, endDate: true },
       }),
       prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }),
       prevIssue > 0 ? prisma.saleOrder.aggregate({ where: { issueNumber: prevIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }) : Promise.resolve({ _sum: { quantity: 0 } }),
       prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: prevFyGte, lt: prevFyLt } }, _sum: { quantity: true } }),
     ]);
 
-  const totalCurrent = currentTotal._sum.quantity ?? 0;
-  const totalPrevious = previousTotal._sum.quantity ?? 0;
-  const totalLastYear = lastYearTotal._sum.quantity ?? 0;
+  // 월별 카드 (온리원 포함)
+  const totalCurrent = (currentTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, currentMonth);
+  const totalPrevious = (previousTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, previousMonth);
+  const totalLastYear = (lastYearTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, sameMonthLastYear);
   const change = percentChange(totalCurrent, totalPrevious);
   const yoyChange = percentChange(totalCurrent, totalLastYear);
 
-  const programBars = programs.map((p) => ({
-    name: p.name,
-    quantity: currentByProgram.find((x) => x.programId === p.id)?._sum.quantity ?? 0,
-  }));
+  // 프로그램별 막대 (온리원 포함)
+  const ooCurrentClasses = ooActiveClasses(allOoContracts, currentMonth);
+  const onlyOneProgram = programs.find(p => p.isOnlyOne);
+  const programBars = [
+    ...programs.filter(p => !p.isOnlyOne).map((p) => ({
+      name: p.name,
+      quantity: currentByProgram.find((x) => x.programId === p.id)?._sum.quantity ?? 0,
+    })),
+    ...(onlyOneProgram ? [{ name: onlyOneProgram.name, quantity: ooCurrentClasses }] : []),
+  ];
 
+  // 호별 막대 (기존 SaleOrder 기반 유지, 온리원은 호 개념 없음)
   const issueBars = byIssue.map((x) => ({
     issue: `${x.issueNumber}호`,
     quantity: x._sum.quantity ?? 0,
   }));
 
-  // 월별 집계: orderDate에서 YYYY-MM 추출
+  // 월별 추이 차트 (온리원 포함)
   const monthlyMap = new Map<string, number>();
   for (const o of allRecent) {
     const ym = o.orderDate.slice(0, 7);
     monthlyMap.set(ym, (monthlyMap.get(ym) ?? 0) + o.quantity);
   }
-
   const monthlyLine = recentMonths.map((month) => ({
     yearMonth: month,
-    quantity: monthlyMap.get(month) ?? 0,
+    quantity: (monthlyMap.get(month) ?? 0) + ooActiveClasses(allOoContracts, month),
   }));
 
-  // 현재 권한 기준 필터링 (일반 프로그램)
+  // 호 현황 카드 (온리원 포함 — 호 = 월이므로 해당 월의 활성 클래스 수 합산)
+  const currentIssueYM = issueToYM(currentIssue, currentYear);
+  const prevIssueYM = prevIssue > 0 ? issueToYM(prevIssue, currentYear) : null;
+  const prevFyCurrentIssueYM = issueToYM(currentIssue, currentYear - 1);
+
+  const currentIssueCombined = (currentIssueTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, currentIssueYM);
+  const prevIssueCombined = prevIssueYM
+    ? (prevIssueTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, prevIssueYM)
+    : 0;
+  const sameIssueLastYearCombined = (sameIssueLastYear._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, prevFyCurrentIssueYM);
+
+  // 목표 달성 현황 (일반 프로그램 + 온리원)
   const permSet = new Set(activePermissions.map((p) => `${p.branchId}-${p.programId}`));
   const validTargets = yearTargets.filter((t) => permSet.has(`${t.branchId}-${t.programId}`));
 
-  // 온리원 집계
   const ooTargetMap = new Map(ooTargets.map((t) => [t.branchId, t.classCount]));
+  const activeOoContracts = allOoContracts.filter(
+    (c): c is OoContract & { institution: { branchId: number } } => true
+  );
+
+  // 현재 활성 온리원 계약 (목표 달성 실적용)
+  const currentActiveOo = await prisma.onlyOneContract.findMany({
+    where: { startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] },
+    select: { classCount: true, institution: { select: { branchId: true } } },
+  });
   const ooActualMap = new Map<number, number>();
-  for (const c of ooContracts) {
+  for (const c of currentActiveOo) {
     const bid = c.institution.branchId;
     ooActualMap.set(bid, (ooActualMap.get(bid) ?? 0) + c.classCount);
   }
 
-  // 목표 달성 현황 (일반 프로그램 + 온리원)
   const branchesWithTarget = new Set([
     ...validTargets.filter((t) => t.quantity > 0).map((t) => t.branchId),
     ...ooTargets.filter((t) => t.classCount > 0).map((t) => t.branchId),
@@ -130,14 +169,10 @@ export default async function HomePage() {
       .reduce((s, [, v]) => s + v, 0);
   const totalAchievement = totalTarget > 0 ? (totalYearActual / totalTarget) * 100 : null;
 
-  // 지사별 달성률 (목표가 있는 지사만)
   const targetByBranch = new Map<number, number>();
-  for (const t of validTargets) {
-    targetByBranch.set(t.branchId, (targetByBranch.get(t.branchId) ?? 0) + t.quantity);
-  }
-  for (const t of ooTargets) {
-    targetByBranch.set(t.branchId, (targetByBranch.get(t.branchId) ?? 0) + t.classCount);
-  }
+  for (const t of validTargets) targetByBranch.set(t.branchId, (targetByBranch.get(t.branchId) ?? 0) + t.quantity);
+  for (const t of ooTargets) targetByBranch.set(t.branchId, (targetByBranch.get(t.branchId) ?? 0) + t.classCount);
+
   const actualByBranch = new Map<number, number>();
   for (const o of yearOrders) {
     const bid = o.institution.branchId;
@@ -148,6 +183,7 @@ export default async function HomePage() {
     if (!branchesWithTarget.has(bid)) continue;
     actualByBranch.set(bid, (actualByBranch.get(bid) ?? 0) + classes);
   }
+
   const branchRanking = branches
     .map((b) => {
       const target = targetByBranch.get(b.id) ?? 0;
@@ -240,9 +276,9 @@ export default async function HomePage() {
         }}
         issue={{
           currentIssue,
-          current: currentIssueTotal._sum.quantity ?? 0,
-          prevChange: prevIssue > 0 ? percentChange(currentIssueTotal._sum.quantity ?? 0, prevIssueTotal._sum.quantity ?? 0) : null,
-          yoyChange: percentChange(currentIssueTotal._sum.quantity ?? 0, sameIssueLastYear._sum.quantity ?? 0),
+          current: currentIssueCombined,
+          prevChange: prevIssue > 0 ? percentChange(currentIssueCombined, prevIssueCombined) : null,
+          yoyChange: percentChange(currentIssueCombined, sameIssueLastYearCombined),
         }}
       />
       <DashboardCharts monthlyLine={monthlyLine} programBars={programBars} issueBars={issueBars} currentMonth={currentMonth} />

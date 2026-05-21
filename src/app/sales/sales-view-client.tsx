@@ -15,6 +15,7 @@ type TargetActualOrder = { institutionId: number; programId: number; quantity: n
 type TargetPermission = { branchId: number; programId: number };
 type OnlyOneTarget = { branchId: number; classCount: number };
 type OnlyOneContract = { branchId: number; classCount: number };
+type ViewOnlyOneContract = { branchId: number; classCount: number; startDate: string; endDate: string | null };
 type InstitutionOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
 
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
@@ -22,7 +23,7 @@ type IssueModalCell = { branchId: number; branchName: string; issueNumber: numbe
 
 export function SalesViewClient({
   branches, programs, allInstitutions,
-  monthlyOrders, issueOrders, salesTargets, targetActualOrders, targetPermissions, onlyOneTargets, onlyOneContracts, institutionOrders,
+  monthlyOrders, issueOrders, viewOnlyOneContracts, salesTargets, targetActualOrders, targetPermissions, onlyOneTargets, onlyOneContracts, institutionOrders,
   view, selectedBranchId, selectedYear, minYear, fiscalYear,
   maxIssues, canEdit, canBulkEdit,
 }: {
@@ -31,6 +32,7 @@ export function SalesViewClient({
   allInstitutions: Institution[];
   monthlyOrders: MonthlyOrder[];
   issueOrders: IssueOrder[];
+  viewOnlyOneContracts: ViewOnlyOneContract[];
   salesTargets: SalesTarget[];
   targetActualOrders: TargetActualOrder[];
   targetPermissions: TargetPermission[];
@@ -78,7 +80,14 @@ export function SalesViewClient({
     ? branches.filter((b) => b.id === selectedBranchId)
     : branches;
 
-  // 월별 그리드: (branchId, YYYY-MM) → 총 부수
+  // 온리원 활성 여부 헬퍼
+  function ooActiveInMonth(c: ViewOnlyOneContract, ym: string): boolean {
+    const first = `${ym}-01`;
+    const last = `${ym}-31`;
+    return c.startDate <= last && (c.endDate === null || c.endDate >= first);
+  }
+
+  // 월별 그리드: (branchId, YYYY-MM) → 총 부수 (온리원 포함)
   const monthlyGridMap = new Map<string, number>();
   for (const o of monthlyOrders) {
     const branchId = instBranchMap.get(o.institutionId);
@@ -87,14 +96,34 @@ export function SalesViewClient({
     const key = `${branchId}-${ym}`;
     monthlyGridMap.set(key, (monthlyGridMap.get(key) ?? 0) + o.quantity);
   }
+  for (const c of viewOnlyOneContracts) {
+    for (const m of months) {
+      if (ooActiveInMonth(c, m.ym)) {
+        const key = `${c.branchId}-${m.ym}`;
+        monthlyGridMap.set(key, (monthlyGridMap.get(key) ?? 0) + c.classCount);
+      }
+    }
+  }
 
-  // 호별 그리드: (branchId, issueNumber) → 총 부수
+  // 호별 그리드: (branchId, issueNumber) → 총 부수 (온리원 포함)
   const issueGridMap = new Map<string, number>();
   for (const o of issueOrders) {
     const branchId = instBranchMap.get(o.institutionId);
     if (branchId === undefined) continue;
     const key = `${branchId}-${o.issueNumber}`;
     issueGridMap.set(key, (issueGridMap.get(key) ?? 0) + o.quantity);
+  }
+  for (const c of viewOnlyOneContracts) {
+    for (let issue = 1; issue <= maxIssues; issue++) {
+      const month = issue + 2;
+      const ym = month <= 12
+        ? `${selectedYear}-${String(month).padStart(2, "0")}`
+        : `${Number(selectedYear) + 1}-${String(month - 12).padStart(2, "0")}`;
+      if (ooActiveInMonth(c, ym)) {
+        const key = `${c.branchId}-${issue}`;
+        issueGridMap.set(key, (issueGridMap.get(key) ?? 0) + c.classCount);
+      }
+    }
   }
 
   function DetailModal({

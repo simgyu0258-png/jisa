@@ -51,6 +51,14 @@ export default async function SalesPage({
       })
     : [];
 
+  // 월별/호별 탭용 온리원 계약 (회계연도 내 겹치는 계약 전체)
+  const viewOnlyOneContracts = (view === "monthly" || view === "issue")
+    ? await prisma.onlyOneContract.findMany({
+        where: { startDate: { lt }, OR: [{ endDate: null }, { endDate: { gte } }] },
+        select: { classCount: true, startDate: true, endDate: true, institution: { select: { branchId: true } } },
+      })
+    : [];
+
   const salesTargets = view === "target"
     ? await prisma.salesTarget.findMany({ where: { year: Number(year) } })
     : [];
@@ -106,6 +114,7 @@ export default async function SalesPage({
         allInstitutions={allInstList}
         monthlyOrders={monthlyOrders}
         issueOrders={issueOrders}
+        viewOnlyOneContracts={viewOnlyOneContracts.map(c => ({ classCount: c.classCount, startDate: c.startDate, endDate: c.endDate, branchId: c.institution.branchId }))}
         salesTargets={salesTargets}
         targetActualOrders={targetActualOrders}
         targetPermissions={targetPermissions}
