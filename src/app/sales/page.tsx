@@ -51,8 +51,8 @@ export default async function SalesPage({
       })
     : [];
 
-  // 월별/호별 탭용 온리원 계약 (회계연도 내 겹치는 계약 전체)
-  const viewOnlyOneContracts = (view === "monthly" || view === "issue")
+  // 월별/호별/기관 탭용 온리원 계약 (회계연도 내 겹치는 계약 전체)
+  const viewOnlyOneContracts = (view === "monthly" || view === "issue" || view === "institution")
     ? await prisma.onlyOneContract.findMany({
         where: { startDate: { lt }, OR: [{ endDate: null }, { endDate: { gte } }] },
         select: { id: true, institutionId: true, classCount: true, startDate: true, endDate: true, institution: { select: { branchId: true } } },

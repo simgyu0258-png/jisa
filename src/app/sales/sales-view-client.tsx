@@ -486,11 +486,29 @@ export function SalesViewClient({
           );
         }
 
+        const ooProgram = programs.find((p) => p.isOnlyOne);
         const instOrderMap = new Map<string, number>();
+        // SaleOrders
         for (const o of institutionOrders) {
           if (instFilterProgramId && o.programId !== instFilterProgramId) continue;
           const key = `${o.institutionId}-${o.issueNumber}`;
           instOrderMap.set(key, (instOrderMap.get(key) ?? 0) + o.quantity);
+        }
+        // 온리원 계약 (필터: 전체 또는 온리원 선택 시 포함)
+        if (!instFilterProgramId || instFilterProgramId === ooProgram?.id) {
+          for (const c of viewOnlyOneContracts) {
+            if (c.branchId !== selectedBranchId) continue;
+            for (let issue = 1; issue <= maxIssues; issue++) {
+              const month = issue + 2;
+              const ym = month <= 12
+                ? `${selectedYear}-${String(month).padStart(2, "0")}`
+                : `${Number(selectedYear) + 1}-${String(month - 12).padStart(2, "0")}`;
+              if (ooActiveInMonth(c, ym)) {
+                const key = `${c.institutionId}-${issue}`;
+                instOrderMap.set(key, (instOrderMap.get(key) ?? 0) + c.classCount);
+              }
+            }
+          }
         }
 
         const branchInsts = allInstitutions.filter((i) => i.branchId === selectedBranchId);
@@ -567,6 +585,23 @@ export function SalesViewClient({
                 if (o.institutionId !== instDetailModal.id) continue;
                 const key = `${o.programId}-${o.issueNumber}`;
                 detailMap.set(key, (detailMap.get(key) ?? 0) + o.quantity);
+              }
+              // 온리원 계약 추가
+              const ooProg = programs.find((p) => p.isOnlyOne);
+              if (ooProg) {
+                for (const c of viewOnlyOneContracts) {
+                  if (c.institutionId !== instDetailModal.id) continue;
+                  for (let issue = 1; issue <= maxIssues; issue++) {
+                    const month = issue + 2;
+                    const ym = month <= 12
+                      ? `${selectedYear}-${String(month).padStart(2, "0")}`
+                      : `${Number(selectedYear) + 1}-${String(month - 12).padStart(2, "0")}`;
+                    if (ooActiveInMonth(c, ym)) {
+                      const key = `${ooProg.id}-${issue}`;
+                      detailMap.set(key, (detailMap.get(key) ?? 0) + c.classCount);
+                    }
+                  }
+                }
               }
               return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setInstDetailModal(null)}>
