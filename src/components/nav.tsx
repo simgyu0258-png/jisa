@@ -80,7 +80,18 @@ export function MainNav({ userName, userRole }: Props) {
           </div>
         ))}
       </nav>
-      <div className="border-t border-slate-100 px-3 py-4">
+      <div className="border-t border-slate-100 px-3 pt-3">
+        <Link
+          href="/guide"
+          className={clsx(
+            "block rounded-md px-3 py-2 text-sm font-medium",
+            currentPath === "/guide" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100",
+          )}
+        >
+          이용 가이드
+        </Link>
+      </div>
+      <div className="px-3 py-4">
         <div className="mb-2 px-2 text-xs text-slate-500">
           {userName}
           <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-600">
