@@ -15,7 +15,7 @@ type TargetActualOrder = { institutionId: number; programId: number; quantity: n
 type TargetPermission = { branchId: number; programId: number };
 type OnlyOneTarget = { branchId: number; classCount: number };
 type OnlyOneContract = { branchId: number; classCount: number };
-type ViewOnlyOneContract = { branchId: number; classCount: number; startDate: string; endDate: string | null };
+type ViewOnlyOneContract = { institutionId: number; branchId: number; classCount: number; startDate: string; endDate: string | null };
 type InstitutionOrder = { institutionId: number; programId: number; issueNumber: number; quantity: number };
 
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
@@ -127,11 +127,12 @@ export function SalesViewClient({
   }
 
   function DetailModal({
-    title, branchId, filterOrders, onClose,
+    title, branchId, filterOrders, filterYM, onClose,
   }: {
     title: string;
     branchId: number;
     filterOrders: (o: { institutionId: number; programId: number; quantity: number }) => boolean;
+    filterYM: string;
     onClose: () => void;
   }) {
     const branchInsts = allInstitutions.filter((i) => i.branchId === branchId);
@@ -142,6 +143,16 @@ export function SalesViewClient({
       if (instBranchMap.get(o.institutionId) !== branchId) continue;
       const key = `${o.institutionId}-${o.programId}`;
       detailMap.set(key, (detailMap.get(key) ?? 0) + o.quantity);
+    }
+    // 온리원 활성 계약 추가
+    const ooProgram = programs.find(p => p.isOnlyOne);
+    if (ooProgram) {
+      for (const c of viewOnlyOneContracts) {
+        if (c.branchId !== branchId) continue;
+        if (!ooActiveInMonth(c, filterYM)) continue;
+        const key = `${c.institutionId}-${ooProgram.id}`;
+        detailMap.set(key, (detailMap.get(key) ?? 0) + c.classCount);
+      }
     }
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -612,19 +623,27 @@ export function SalesViewClient({
           title={`${monthlyModal.branchName} — ${monthlyModal.ym.replace("-", "년 ")}월`}
           branchId={monthlyModal.branchId}
           filterOrders={(o) => (o as MonthlyOrder).orderDate?.startsWith(monthlyModal.ym) ?? false}
+          filterYM={monthlyModal.ym}
           onClose={() => setMonthlyModal(null)}
         />
       )}
 
       {/* 호별 상세 모달 */}
-      {issueModal && (
-        <DetailModal
-          title={`${issueModal.branchName} — ${issueModal.issueNumber}호`}
-          branchId={issueModal.branchId}
-          filterOrders={(o) => (o as IssueOrder).issueNumber === issueModal.issueNumber}
-          onClose={() => setIssueModal(null)}
-        />
-      )}
+      {issueModal && (() => {
+        const issueMonth = issueModal.issueNumber + 2;
+        const filterYM = issueMonth <= 12
+          ? `${selectedYear}-${String(issueMonth).padStart(2, "0")}`
+          : `${Number(selectedYear) + 1}-${String(issueMonth - 12).padStart(2, "0")}`;
+        return (
+          <DetailModal
+            title={`${issueModal.branchName} — ${issueModal.issueNumber}호`}
+            branchId={issueModal.branchId}
+            filterOrders={(o) => (o as IssueOrder).issueNumber === issueModal.issueNumber}
+            filterYM={filterYM}
+            onClose={() => setIssueModal(null)}
+          />
+        );
+      })()}
 
       {showOrderModal && (
         <OrderModal

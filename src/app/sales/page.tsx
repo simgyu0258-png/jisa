@@ -55,7 +55,7 @@ export default async function SalesPage({
   const viewOnlyOneContracts = (view === "monthly" || view === "issue")
     ? await prisma.onlyOneContract.findMany({
         where: { startDate: { lt }, OR: [{ endDate: null }, { endDate: { gte } }] },
-        select: { classCount: true, startDate: true, endDate: true, institution: { select: { branchId: true } } },
+        select: { id: true, institutionId: true, classCount: true, startDate: true, endDate: true, institution: { select: { branchId: true } } },
       })
     : [];
 
@@ -114,7 +114,7 @@ export default async function SalesPage({
         allInstitutions={allInstList}
         monthlyOrders={monthlyOrders}
         issueOrders={issueOrders}
-        viewOnlyOneContracts={viewOnlyOneContracts.map(c => ({ classCount: c.classCount, startDate: c.startDate, endDate: c.endDate, branchId: c.institution.branchId }))}
+        viewOnlyOneContracts={viewOnlyOneContracts.map(c => ({ institutionId: c.institutionId, classCount: c.classCount, startDate: c.startDate, endDate: c.endDate, branchId: c.institution.branchId }))}
         salesTargets={salesTargets}
         targetActualOrders={targetActualOrders}
         targetPermissions={targetPermissions}
