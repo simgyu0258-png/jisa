@@ -40,6 +40,10 @@ export async function createBranchAction(formData: FormData) {
   const programs = await prisma.program.findMany({ orderBy: { id: "asc" } });
   const branchCode = await generateBranchCode();
 
+  const aliases = formData.getAll("alias")
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0);
+
   const branch = await prisma.branch.create({
     data: {
       branchCode,
@@ -56,6 +60,9 @@ export async function createBranchAction(formData: FormData) {
           isEnabled: false,
         })),
       },
+      aliases: aliases.length > 0
+        ? { create: aliases.map((n) => ({ name: n })) }
+        : undefined,
     },
   });
 
