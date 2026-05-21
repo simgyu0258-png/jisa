@@ -57,7 +57,7 @@ export default async function HomePage() {
       }),
       prisma.salesTarget.findMany({ where: { year: currentYear } }),
       prisma.saleOrder.findMany({
-        where: { orderDate: { gte: fyGte, lt: fyLt } },
+        where: { orderDate: { gte: fyGte, lt: fyLt }, program: { isOnlyOne: false } },
         select: { quantity: true, institution: { select: { branchId: true } } },
       }),
       prisma.branch.findMany({ select: { id: true, name: true } }),
