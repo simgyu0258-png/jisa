@@ -80,7 +80,7 @@ export function MainNav({ userName, userRole }: Props) {
           </div>
         ))}
       </nav>
-      <div className="border-t border-slate-100 px-3 pt-3">
+      <div className="border-t border-slate-100 px-3 py-3 space-y-0.5">
         <Link
           href="/guide"
           className={clsx(
@@ -90,20 +90,18 @@ export function MainNav({ userName, userRole }: Props) {
         >
           이용 가이드
         </Link>
-      </div>
-      <div className="px-3 py-4">
-        <div className="mb-2 px-2 text-xs text-slate-500">
-          {userName}
-          <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-600">
-            {isMaster ? "마스터" : "일반"}
-          </span>
-        </div>
         <button
           className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-100"
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           로그아웃
         </button>
+        <div className="px-2 py-1 text-xs text-slate-400">
+          {userName}
+          <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-600">
+            {isMaster ? "마스터" : "일반"}
+          </span>
+        </div>
       </div>
     </aside>
   );
