@@ -24,6 +24,7 @@ export default async function HomePage() {
 
   const [programs, currentByProgram, currentTotal, previousTotal, lastYearTotal, allRecent, byIssue,
     yearTargets, yearOrders, branches, activePermissions,
+    ooTargets, ooContracts,
     currentIssueTotal, prevIssueTotal, sameIssueLastYear] =
     await Promise.all([
       prisma.program.findMany({ orderBy: { id: "asc" } }),
@@ -61,6 +62,14 @@ export default async function HomePage() {
       }),
       prisma.branch.findMany({ select: { id: true, name: true } }),
       prisma.branchProgramPermission.findMany({ where: { isEnabled: true }, select: { branchId: true, programId: true } }),
+      prisma.onlyOneTarget.findMany({ where: { year: currentYear } }),
+      prisma.onlyOneContract.findMany({
+        where: {
+          startDate: { lte: new Date().toISOString().slice(0, 10) },
+          OR: [{ endDate: null }, { endDate: { gte: new Date().toISOString().slice(0, 10) } }],
+        },
+        select: { classCount: true, institution: { select: { branchId: true } } },
+      }),
       prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }),
       prevIssue > 0 ? prisma.saleOrder.aggregate({ where: { issueNumber: prevIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }) : Promise.resolve({ _sum: { quantity: 0 } }),
       prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: prevFyGte, lt: prevFyLt } }, _sum: { quantity: true } }),
@@ -94,18 +103,31 @@ export default async function HomePage() {
     quantity: monthlyMap.get(month) ?? 0,
   }));
 
-  // 현재 권한 기준 필터링
+  // 현재 권한 기준 필터링 (일반 프로그램)
   const permSet = new Set(activePermissions.map((p) => `${p.branchId}-${p.programId}`));
   const validTargets = yearTargets.filter((t) => permSet.has(`${t.branchId}-${t.programId}`));
 
-  // 목표 달성 현황 (권한 있고 목표가 있는 지사만)
-  const branchesWithTarget = new Set(
-    validTargets.filter((t) => t.quantity > 0).map((t) => t.branchId)
-  );
-  const totalTarget = validTargets.reduce((s, t) => s + t.quantity, 0);
+  // 온리원 집계
+  const ooTargetMap = new Map(ooTargets.map((t) => [t.branchId, t.classCount]));
+  const ooActualMap = new Map<number, number>();
+  for (const c of ooContracts) {
+    const bid = c.institution.branchId;
+    ooActualMap.set(bid, (ooActualMap.get(bid) ?? 0) + c.classCount);
+  }
+
+  // 목표 달성 현황 (일반 프로그램 + 온리원)
+  const branchesWithTarget = new Set([
+    ...validTargets.filter((t) => t.quantity > 0).map((t) => t.branchId),
+    ...ooTargets.filter((t) => t.classCount > 0).map((t) => t.branchId),
+  ]);
+  const totalTarget = validTargets.reduce((s, t) => s + t.quantity, 0)
+    + ooTargets.reduce((s, t) => s + t.classCount, 0);
   const totalYearActual = yearOrders
     .filter((o) => branchesWithTarget.has(o.institution.branchId))
-    .reduce((s, o) => s + o.quantity, 0);
+    .reduce((s, o) => s + o.quantity, 0)
+    + [...ooActualMap.entries()]
+      .filter(([bid]) => branchesWithTarget.has(bid))
+      .reduce((s, [, v]) => s + v, 0);
   const totalAchievement = totalTarget > 0 ? (totalYearActual / totalTarget) * 100 : null;
 
   // 지사별 달성률 (목표가 있는 지사만)
@@ -113,11 +135,18 @@ export default async function HomePage() {
   for (const t of validTargets) {
     targetByBranch.set(t.branchId, (targetByBranch.get(t.branchId) ?? 0) + t.quantity);
   }
+  for (const t of ooTargets) {
+    targetByBranch.set(t.branchId, (targetByBranch.get(t.branchId) ?? 0) + t.classCount);
+  }
   const actualByBranch = new Map<number, number>();
   for (const o of yearOrders) {
     const bid = o.institution.branchId;
     if (!branchesWithTarget.has(bid)) continue;
     actualByBranch.set(bid, (actualByBranch.get(bid) ?? 0) + o.quantity);
+  }
+  for (const [bid, classes] of ooActualMap) {
+    if (!branchesWithTarget.has(bid)) continue;
+    actualByBranch.set(bid, (actualByBranch.get(bid) ?? 0) + classes);
   }
   const branchRanking = branches
     .map((b) => {
