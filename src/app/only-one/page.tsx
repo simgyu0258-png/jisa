@@ -29,9 +29,10 @@ export default async function OnlyOnePage({ searchParams }: { searchParams: Prom
 
   const minYear = oldestContract ? getFiscalYearFromDate(oldestContract.startDate) : currentYear;
 
-  // 회계연도 내 활성 계약: startDate < lt AND (endDate IS NULL OR endDate >= gte)
+  // 현재 계약 중인 것만: 시작일이 오늘 이하이고 종료일이 없거나 오늘 이후
+  const today = new Date().toISOString().slice(0, 10);
   const activeContracts = await prisma.onlyOneContract.findMany({
-    where: { startDate: { lt }, OR: [{ endDate: null }, { endDate: { gte } }] },
+    where: { startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] },
     select: { institutionId: true, classCount: true, institution: { select: { branchId: true } } },
   });
 

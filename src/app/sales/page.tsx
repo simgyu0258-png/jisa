@@ -73,9 +73,10 @@ export default async function SalesPage({
     ? await prisma.onlyOneTarget.findMany({ where: { year: Number(year) } })
     : [];
 
+  const today = new Date().toISOString().slice(0, 10);
   const onlyOneContracts = view === "target"
     ? await prisma.onlyOneContract.findMany({
-        where: { startDate: { lt }, OR: [{ endDate: null }, { endDate: { gte } }] },
+        where: { startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] },
         select: { classCount: true, institution: { select: { branchId: true } } },
       })
     : [];
