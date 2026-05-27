@@ -36,6 +36,7 @@ export function TargetsClient({
   const [uploading, setUploading] = useState(false);
   const [uploadPreview, setUploadPreview] = useState<TargetPreviewResponse | null>(null);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadYear, setUploadYear] = useState(year);
 
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: currentYear - minYear + 2 }, (_, i) => minYear + i);
@@ -95,13 +96,13 @@ export function TargetsClient({
       const res = await fetch("/api/targets/excel/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ year, payload: uploadPreview.payload }),
+        body: JSON.stringify({ year: uploadYear, payload: uploadPreview.payload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "적용 실패");
       setUploadPreview(null);
       setShowUpload(false);
-      setUploadMessage(`${data.count}개 지사 목표가 반영됐습니다.`);
+      setUploadMessage(`${uploadYear}년 ${data.count}개 지사 목표가 반영됐습니다.`);
       router.refresh();
     } catch (err) {
       setUploadMessage(err instanceof Error ? err.message : "오류가 발생했습니다.");
@@ -144,7 +145,7 @@ export function TargetsClient({
       {showUpload && (
         <section className="rounded-lg border border-slate-200 bg-white">
           <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">목표 일괄등록 ({year}년)</h2>
+            <h2 className="font-semibold text-slate-800">목표 일괄등록</h2>
             <a
               className="text-sm text-slate-500 underline hover:text-slate-700"
               href={`/api/targets/excel/template?t=${Date.now()}`}
@@ -155,6 +156,13 @@ export function TargetsClient({
           <div className="p-5 space-y-4">
             <p className="text-xs text-slate-400">지사명을 기준으로 매핑됩니다. 판매권한이 없는 프로그램 목표는 반영되지 않습니다.</p>
             <form className="flex flex-wrap items-center gap-2" onSubmit={handleUploadPreview}>
+              <select
+                className="text-sm"
+                value={uploadYear}
+                onChange={(e) => { setUploadYear(Number(e.target.value)); setUploadPreview(null); }}
+              >
+                {yearOptions.map((y) => <option key={y} value={y}>{y}년</option>)}
+              </select>
               <input accept=".xlsx,.xls" name="file" required type="file" />
               <input className="w-48 text-sm" name="password" placeholder="파일 비밀번호 (없으면 빈칸)" type="password" />
               <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={uploading} type="submit">
@@ -165,6 +173,7 @@ export function TargetsClient({
             {uploadPreview && (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm text-slate-600">
+                  <span className="font-medium text-slate-700">{uploadYear}년 목표</span>
                   <span>유효 <strong className="text-emerald-700">{uploadPreview.summary.validRows}건</strong></span>
                   {uploadPreview.summary.errorRows > 0 && <span className="text-rose-600">오류 {uploadPreview.summary.errorRows}건</span>}
                 </div>
