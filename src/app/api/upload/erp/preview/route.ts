@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
+import { prepareExcelBuffer } from "@/lib/excel-reader";
 import { auth } from "@/auth";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 
@@ -42,7 +43,15 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "파일이 없습니다." }, { status: 400 });
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const passwordRaw = formData.get("password");
+  const password = typeof passwordRaw === "string" && passwordRaw.trim() ? passwordRaw.trim() : undefined;
+  const rawBuffer = Buffer.from(await file.arrayBuffer());
+  let buffer: Buffer;
+  try {
+    buffer = await prepareExcelBuffer(rawBuffer, password);
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "복호화 실패" }, { status: 400 });
+  }
   const wb = XLSX.read(buffer, { type: "buffer" });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }) as unknown[][];

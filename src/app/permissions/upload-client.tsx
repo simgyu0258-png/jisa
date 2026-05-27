@@ -64,12 +64,20 @@ export function PermissionsUploadClient() {
         action={(formData) => {
           requestPreview(formData);
         }}
-        className="flex flex-wrap items-center gap-2"
+        className="space-y-2"
       >
-        <input accept=".xlsx,.xls" name="file" required type="file" />
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white" disabled={loading}>
-          미리보기
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input accept=".xlsx,.xls" name="file" required type="file" />
+          <input
+            className="w-48 text-sm"
+            name="password"
+            placeholder="파일 비밀번호 (없으면 빈칸)"
+            type="password"
+          />
+          <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white" disabled={loading}>
+            미리보기
+          </button>
+        </div>
       </form>
       {preview && (
         <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">

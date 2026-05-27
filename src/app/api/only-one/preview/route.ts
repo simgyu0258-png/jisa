@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
+import { prepareExcelBuffer } from "@/lib/excel-reader";
 import { auth } from "@/auth";
 
 export type OnlyOnePreviewRow = {
@@ -53,7 +54,15 @@ export async function POST(request: Request) {
   for (const alias of aliases) branchMap.set(alias.name, alias.branchId);
   const instMap = new Map(institutions.map((i) => [`${i.branchId}::${i.name}`, i.id]));
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const passwordRaw = formData.get("password");
+  const password = typeof passwordRaw === "string" && passwordRaw.trim() ? passwordRaw.trim() : undefined;
+  const rawBuffer = Buffer.from(await file.arrayBuffer());
+  let buffer: Buffer;
+  try {
+    buffer = await prepareExcelBuffer(rawBuffer, password);
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "복호화 실패" }, { status: 400 });
+  }
   const wb = XLSX.read(buffer, { type: "buffer" });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });

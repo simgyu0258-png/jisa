@@ -74,20 +74,28 @@ export function BranchBulkUploadClient() {
             판매권한: 프로그램명 컬럼에 O(권한있음) / X(권한없음)
           </p>
           <form
-            className="flex flex-wrap items-center gap-2"
+            className="space-y-2"
             onSubmit={(e) => {
               e.preventDefault();
               requestPreview(new FormData(e.currentTarget));
             }}
           >
-            <input accept=".xlsx,.xls" name="file" required type="file" />
-            <button
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-              disabled={loading}
-              type="submit"
-            >
-              {loading ? "처리 중..." : "미리보기"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <input accept=".xlsx,.xls" name="file" required type="file" />
+              <input
+                className="w-48 text-sm"
+                name="password"
+                placeholder="파일 비밀번호 (없으면 빈칸)"
+                type="password"
+              />
+              <button
+                className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+                disabled={loading}
+                type="submit"
+              >
+                {loading ? "처리 중..." : "미리보기"}
+              </button>
+            </div>
           </form>
         </div>
       </section>
