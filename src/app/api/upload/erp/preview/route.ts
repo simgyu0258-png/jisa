@@ -81,8 +81,12 @@ export async function POST(req: NextRequest) {
     prisma.erpProductMapping.findMany({ select: { productName: true, programId: true, issueNumber: true } }),
   ]);
 
-  const branchMap = new Map(branches.map((b) => [b.name, b.id]));
-  for (const alias of aliases) branchMap.set(alias.name, alias.branchId);
+  function normalizeName(name: string) {
+    return name.replace(/㈜/g, "(주)").replace(/㈔/g, "(사)").trim();
+  }
+
+  const branchMap = new Map(branches.map((b) => [normalizeName(b.name), b.id]));
+  for (const alias of aliases) branchMap.set(normalizeName(alias.name), alias.branchId);
 
   const instMap = new Map(institutions.map((i) => [`${i.branchId}::${i.name}`, i.id]));
   const mappingMap = new Map(productMappings.map((m) => [m.productName, { programId: m.programId, issueNumber: m.issueNumber }]));
@@ -119,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     if (isSkipped(productName)) { skipped++; continue; }
 
-    const branchName = String(row[col("거래처명")] ?? "").trim();
+    const branchName = normalizeName(String(row[col("거래처명")] ?? ""));
     const instName = String(row[col("배송처명")] ?? "").trim();
     const qty = Number(String(row[col("수량")] ?? "0").replace(/,/g, "")) || 0;
     const orderDate = parseDate(row[col("주문일자")]);
