@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { DashboardCharts } from "@/components/dashboard-charts";
-import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange, getCurrentFiscalIssue, getIssueAwareDateWhere } from "@/lib/month";
+import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange, getCurrentFiscalIssue, getIssueAwareDateWhere, getIssueDateRange } from "@/lib/month";
 import { DashboardSummaryCards } from "@/components/dashboard-summary-cards";
 import { prisma } from "@/lib/prisma";
 
@@ -34,7 +34,6 @@ export default async function HomePage() {
 
   const currentYear = getCurrentFiscalYear();
   const { gte: fyGte, lt: fyLt } = getFiscalYearRange(currentYear);
-  const { gte: prevFyGte, lt: prevFyLt } = getFiscalYearRange(currentYear - 1);
   const currentIssue = getCurrentFiscalIssue();
   const prevIssue = currentIssue - 1;
 
@@ -84,9 +83,9 @@ export default async function HomePage() {
       prisma.onlyOneContract.findMany({
         select: { classCount: true, startDate: true, endDate: true },
       }),
-      prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }),
-      prevIssue > 0 ? prisma.saleOrder.aggregate({ where: { issueNumber: prevIssue, orderDate: { gte: fyGte, lt: fyLt } }, _sum: { quantity: true } }) : Promise.resolve({ _sum: { quantity: 0 } }),
-      prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: { gte: prevFyGte, lt: prevFyLt } }, _sum: { quantity: true } }),
+      prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: getIssueDateRange(currentIssue, currentYear) }, _sum: { quantity: true } }),
+      prevIssue > 0 ? prisma.saleOrder.aggregate({ where: { issueNumber: prevIssue, orderDate: getIssueDateRange(prevIssue, currentYear) }, _sum: { quantity: true } }) : Promise.resolve({ _sum: { quantity: 0 } }),
+      prisma.saleOrder.aggregate({ where: { issueNumber: currentIssue, orderDate: getIssueDateRange(currentIssue, currentYear - 1) }, _sum: { quantity: true } }),
     ]);
 
   // 월별 카드 (온리원 포함)

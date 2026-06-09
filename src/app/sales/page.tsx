@@ -92,7 +92,7 @@ export default async function SalesPage({
   const institutionOrders = view === "institution"
     ? await prisma.saleOrder.findMany({
         where: {
-          orderDate: { gte, lt },
+          ...getIssueAwareDateWhere(Number(year)),
           ...(branchId ? { institution: { branchId } } : {}),
         },
         select: { institutionId: true, programId: true, issueNumber: true, quantity: true },
