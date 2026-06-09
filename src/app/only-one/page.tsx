@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getCurrentFiscalYear, getFiscalYearRange, getFiscalYearFromDate } from "@/lib/month";
+import { getCurrentFiscalYear, getFiscalYearFromDate } from "@/lib/month";
 import { OnlyOneClient } from "./only-one-client";
 
 type Params = { year?: string };
@@ -12,7 +12,6 @@ export default async function OnlyOnePage({ searchParams }: { searchParams: Prom
 
   const currentYear = getCurrentFiscalYear();
   const year = params.year ? Number(params.year) : currentYear;
-  const { gte, lt } = getFiscalYearRange(year);
 
   const onlyOneProgram = await prisma.program.findFirst({ where: { isOnlyOne: true } });
 
@@ -56,7 +55,6 @@ export default async function OnlyOnePage({ searchParams }: { searchParams: Prom
       year={year}
       minYear={minYear}
       currentYear={currentYear}
-      branches={branches}
       summaries={summaries}
     />
   );

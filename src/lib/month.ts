@@ -59,10 +59,6 @@ export function getRecentMonths(count = 12) {
   );
 }
 
-export function isValidYearMonth(value: string) {
-  return /^\d{4}-\d{2}$/.test(value);
-}
-
 /**
  * 호별 집계용 Prisma where 조건 반환.
  * issueNumber 1-10은 회계연도 3-12월, 11-12는 다음 캘린더연도 1-2월에만 해당함.

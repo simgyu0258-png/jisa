@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SaleOrderPreviewRow, SaleOrderPreviewResponse } from "@/app/api/sales/excel/preview/route";
+import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 import type { ErpUnresolvedRow, ErpReturnRow, ErpPreviewResponse } from "@/app/api/upload/erp/preview/route";
 
 type Tab = "erp" | "branch";
@@ -450,7 +450,6 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
     }
   }
 
-  const unresolvedCount = preview?.unresolved.length ?? 0;
   const resolvedCount = Object.keys(resolvedMap).length;
   const canApply = preview && (preview.payload.length > 0 || resolvedCount > 0 || preview.returns.length > 0);
 

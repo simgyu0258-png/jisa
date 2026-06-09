@@ -108,7 +108,6 @@ export default async function SalesPage({
   return (
     <div className="space-y-4">
       <SalesViewClient
-        canBulkEdit={!!session}
         branches={branches}
         programs={programs}
         allInstitutions={allInstList}

@@ -1,10 +1,6 @@
 import { loginAction } from "./actions";
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
+export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
       <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">

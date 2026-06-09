@@ -25,7 +25,7 @@ export function SalesViewClient({
   branches, programs, allInstitutions,
   monthlyOrders, issueOrders, viewOnlyOneContracts, salesTargets, targetActualOrders, targetPermissions, onlyOneTargets, onlyOneContracts, institutionOrders,
   view, selectedBranchId, selectedYear, minYear, fiscalYear,
-  maxIssues, canEdit, canBulkEdit,
+  maxIssues, canEdit,
 }: {
   branches: Branch[];
   programs: Program[];
@@ -46,7 +46,6 @@ export function SalesViewClient({
   fiscalYear: number;
   maxIssues: number;
   canEdit: boolean;
-  canBulkEdit?: boolean;
 }) {
   const router = useRouter();
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -211,13 +210,12 @@ export function SalesViewClient({
   }
 
   function GridTable({
-    cols, getCellKey, getCellValue, getColLabel, footerLabel,
+    cols, getCellKey, getCellValue, footerLabel,
     onCellClick,
   }: {
     cols: { key: string; label: string }[];
     getCellKey: (branchId: number, colKey: string) => string;
     getCellValue: (mapKey: string) => number;
-    getColLabel: (colKey: string) => string;
     footerLabel: string;
     onCellClick: (branch: Branch, colKey: string) => void;
   }) {
@@ -338,7 +336,6 @@ export function SalesViewClient({
           cols={months.map((m) => ({ key: m.ym, label: m.label }))}
           getCellKey={(branchId, ym) => `${branchId}-${ym}`}
           getCellValue={(key) => monthlyGridMap.get(key) ?? 0}
-          getColLabel={(ym) => ym}
           footerLabel="합계"
           onCellClick={(branch, ym) => setMonthlyModal({ branchId: branch.id, branchName: branch.name, ym })}
         />
@@ -350,7 +347,6 @@ export function SalesViewClient({
           cols={issueNumbers.map((n) => ({ key: String(n), label: `${n}호` }))}
           getCellKey={(branchId, n) => `${branchId}-${n}`}
           getCellValue={(key) => issueGridMap.get(key) ?? 0}
-          getColLabel={(n) => `${n}호`}
           footerLabel="합계"
           onCellClick={(branch, n) => setIssueModal({ branchId: branch.id, branchName: branch.name, issueNumber: Number(n) })}
         />

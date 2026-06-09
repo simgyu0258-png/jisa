@@ -17,12 +17,11 @@ function rateColor(rate: number | null) {
 }
 
 export function OnlyOneClient({
-  year, minYear, currentYear, branches, summaries,
+  year, minYear, currentYear, summaries,
 }: {
   year: number;
   minYear: number;
   currentYear: number;
-  branches: Branch[];
   summaries: BranchSummary[];
 }) {
   const router = useRouter();

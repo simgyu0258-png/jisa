@@ -93,8 +93,6 @@ export default async function HomePage() {
   const totalCurrent = (currentTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, currentMonth);
   const totalPrevious = (previousTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, previousMonth);
   const totalLastYear = (lastYearTotal._sum.quantity ?? 0) + ooActiveClasses(allOoContracts, sameMonthLastYear);
-  const change = percentChange(totalCurrent, totalPrevious);
-  const yoyChange = percentChange(totalCurrent, totalLastYear);
 
   // 프로그램별 막대 (온리원 포함)
   const ooCurrentClasses = ooActiveClasses(allOoContracts, currentMonth);
@@ -138,11 +136,6 @@ export default async function HomePage() {
   // 목표 달성 현황 (일반 프로그램 + 온리원)
   const permSet = new Set(activePermissions.map((p) => `${p.branchId}-${p.programId}`));
   const validTargets = yearTargets.filter((t) => permSet.has(`${t.branchId}-${t.programId}`));
-
-  const ooTargetMap = new Map(ooTargets.map((t) => [t.branchId, t.classCount]));
-  const activeOoContracts = allOoContracts.filter(
-    (c): c is OoContract & { institution: { branchId: number } } => true
-  );
 
   // 현재 활성 온리원 계약 (목표 달성 실적용)
   const currentActiveOo = await prisma.onlyOneContract.findMany({
