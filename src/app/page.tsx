@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { DashboardCharts } from "@/components/dashboard-charts";
-import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange, getCurrentFiscalIssue, getIssueAwareDateWhere, getIssueDateRange } from "@/lib/month";
+import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getCurrentFiscalIssue, getIssueAwareDateWhere, getIssueDateRange } from "@/lib/month";
 import { DashboardSummaryCards } from "@/components/dashboard-summary-cards";
 import { prisma } from "@/lib/prisma";
 
@@ -33,7 +33,6 @@ export default async function HomePage() {
   const recentMonths = getRecentMonths(12);
 
   const currentYear = getCurrentFiscalYear();
-  const { gte: fyGte, lt: fyLt } = getFiscalYearRange(currentYear);
   const currentIssue = getCurrentFiscalIssue();
   const prevIssue = currentIssue - 1;
 
@@ -74,7 +73,7 @@ export default async function HomePage() {
       }),
       prisma.salesTarget.findMany({ where: { year: currentYear } }),
       prisma.saleOrder.findMany({
-        where: { orderDate: { gte: fyGte, lt: fyLt }, program: { isOnlyOne: false } },
+        where: { ...getIssueAwareDateWhere(currentYear), program: { isOnlyOne: false } },
         select: { quantity: true, institution: { select: { branchId: true } } },
       }),
       prisma.branch.findMany({ select: { id: true, name: true } }),

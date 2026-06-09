@@ -65,7 +65,7 @@ export default async function SalesPage({
 
   const targetActualOrders = view === "target"
     ? await prisma.saleOrder.findMany({
-        where: { orderDate: { gte, lt } },
+        where: getIssueAwareDateWhere(Number(year)),
         select: { institutionId: true, programId: true, quantity: true },
       })
     : [];
