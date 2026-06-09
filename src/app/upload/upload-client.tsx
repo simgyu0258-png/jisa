@@ -429,6 +429,7 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
         issueNumber: r.issueNumber,
         quantity: r.quantity,
         fiscalYear: returnFiscalYears[i] ?? r.suggestedFiscalYear,
+        originalOrderDate: r.originalOrderDate,
       }));
 
       const res = await fetch("/api/upload/erp/apply", {

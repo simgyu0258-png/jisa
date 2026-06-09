@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { getIssueCanonicalDate } from "@/lib/month";
+import { getIssueCanonicalDate, getFiscalYearForIssue } from "@/lib/month";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 
 type NewMapping = {
@@ -27,6 +27,7 @@ type ReturnApplyRow = {
   issueNumber: number;
   quantity: number;
   fiscalYear: number;
+  originalOrderDate: string;
 };
 
 export async function POST(request: Request) {
@@ -122,12 +123,16 @@ export async function POST(request: Request) {
     upsertedCount++;
   }
 
-  // 반품 처리 — 귀속 회계연도의 canonical orderDate로 저장
+  // 반품 처리 — 같은 회계연도면 실제 주문일자로, 연도 경계를 넘는 반품이면 발행월 말일로 저장.
+  // 실제 주문일자를 쓰면 월별 현황이 정확하고 서로 다른 반품이 합산되며, 음수 행으로 보존돼
+  // 나중에 구입이 추가되면 집계 합산으로 자동 net 처리됨.
   for (const r of returnRows) {
     const institutionId = r.isNewInstitution
       ? newInstMap.get(`${r.branchId}::${r.institutionName}`)!
       : r.institutionId;
-    const orderDate = getIssueCanonicalDate(r.issueNumber, r.fiscalYear);
+    const orderDate = getFiscalYearForIssue(r.issueNumber, r.originalOrderDate) === r.fiscalYear
+      ? r.originalOrderDate
+      : getIssueCanonicalDate(r.issueNumber, r.fiscalYear);
     await prisma.saleOrder.upsert({
       where: {
         institutionId_programId_issueNumber_orderDate: {
