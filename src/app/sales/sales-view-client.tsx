@@ -21,6 +21,174 @@ type InstitutionOrder = { institutionId: number; programId: number; issueNumber:
 type MonthlyModalCell = { branchId: number; branchName: string; ym: string };
 type IssueModalCell = { branchId: number; branchName: string; issueNumber: number };
 
+// 온리원 활성 여부 헬퍼
+function ooActiveInMonth(c: ViewOnlyOneContract, ym: string): boolean {
+  const first = `${ym}-01`;
+  const last = `${ym}-31`;
+  return c.startDate <= last && (c.endDate === null || c.endDate >= first);
+}
+
+function GridTable({
+  cols, getCellKey, getCellValue, footerLabel, onCellClick, visibleBranches,
+}: {
+  cols: { key: string; label: string }[];
+  getCellKey: (branchId: number, colKey: string) => string;
+  getCellValue: (mapKey: string) => number;
+  footerLabel: string;
+  onCellClick: (branch: Branch, colKey: string) => void;
+  visibleBranches: Branch[];
+}) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table className="min-w-full text-sm">
+        <thead className="bg-slate-100">
+          <tr>
+            <th className="px-3 py-2 text-left">지사</th>
+            {cols.map((c) => (
+              <th className="px-3 py-2 text-right whitespace-nowrap" key={c.key}>{c.label}</th>
+            ))}
+            <th className="px-3 py-2 text-right font-semibold">합계</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibleBranches.length === 0 && (
+            <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={cols.length + 2}>데이터가 없습니다.</td></tr>
+          )}
+          {visibleBranches.map((branch) => {
+            const values = cols.map((c) => getCellValue(getCellKey(branch.id, c.key)));
+            const total = values.reduce((s, v) => s + v, 0);
+            return (
+              <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
+                <td className="px-3 py-2 font-medium text-slate-700">{branch.name}</td>
+                {values.map((v, i) => (
+                  <td className="px-3 py-2 text-right" key={cols[i].key}>
+                    {v !== 0 ? (
+                      <button
+                        className={`font-medium hover:text-blue-600 hover:underline ${v < 0 ? "text-rose-500" : "text-slate-800"}`}
+                        onClick={() => onCellClick(branch, cols[i].key)}
+                      >
+                        {v.toLocaleString()}
+                      </button>
+                    ) : (
+                      <span className="text-slate-300">-</span>
+                    )}
+                  </td>
+                ))}
+                <td className={`px-3 py-2 text-right font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+        {visibleBranches.length > 0 && (
+          <tfoot className="bg-slate-50 font-semibold">
+            <tr>
+              <td className="px-3 py-2">{footerLabel}</td>
+              {cols.map((c) => {
+                const total = visibleBranches.reduce((s, b) => s + getCellValue(getCellKey(b.id, c.key)), 0);
+                return <td className={`px-3 py-2 text-right ${total < 0 ? "text-rose-500" : ""}`} key={c.key}>{total !== 0 ? total.toLocaleString() : "-"}</td>;
+              })}
+              <td className="px-3 py-2 text-right">
+                {visibleBranches.reduce((s, b) => s + cols.reduce((ss, c) => ss + getCellValue(getCellKey(b.id, c.key)), 0), 0).toLocaleString()}
+              </td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
+  );
+}
+
+function DetailModal({
+  title, branchId, filterOrders, filterYM, onClose,
+  allInstitutions, instBranchMap, monthlyOrders, issueOrders, viewOnlyOneContracts, programs,
+}: {
+  title: string;
+  branchId: number;
+  filterOrders: (o: { institutionId: number; programId: number; quantity: number }) => boolean;
+  filterYM: string;
+  onClose: () => void;
+  allInstitutions: Institution[];
+  instBranchMap: Map<number, number>;
+  monthlyOrders: MonthlyOrder[];
+  issueOrders: IssueOrder[];
+  viewOnlyOneContracts: ViewOnlyOneContract[];
+  programs: Program[];
+}) {
+  const branchInsts = allInstitutions.filter((i) => i.branchId === branchId);
+  const detailMap = new Map<string, number>();
+  const allOrders = [...monthlyOrders, ...issueOrders] as { institutionId: number; programId: number; quantity: number }[];
+  for (const o of allOrders) {
+    if (!filterOrders(o)) continue;
+    if (instBranchMap.get(o.institutionId) !== branchId) continue;
+    const key = `${o.institutionId}-${o.programId}`;
+    detailMap.set(key, (detailMap.get(key) ?? 0) + o.quantity);
+  }
+  // 온리원 활성 계약 추가
+  const ooProgram = programs.find(p => p.isOnlyOne);
+  if (ooProgram) {
+    for (const c of viewOnlyOneContracts) {
+      if (c.branchId !== branchId) continue;
+      if (!ooActiveInMonth(c, filterYM)) continue;
+      const key = `${c.institutionId}-${ooProgram.id}`;
+      detailMap.set(key, (detailMap.get(key) ?? 0) + c.classCount);
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="relative max-h-[80vh] w-full max-w-5xl overflow-auto rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+          <h2 className="font-semibold text-slate-800">{title}</h2>
+          <button className="text-slate-400 hover:text-slate-700" onClick={onClose}>✕</button>
+        </div>
+        <div className="p-6">
+          {branchInsts.length === 0 ? (
+            <p className="text-sm text-slate-400">등록된 기관이 없습니다.</p>
+          ) : (
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="px-3 py-2 text-left whitespace-nowrap">기관</th>
+                  {programs.map((p) => (
+                    <th className="px-3 py-2 text-right whitespace-nowrap" key={p.id}>{p.name}</th>
+                  ))}
+                  <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">합계</th>
+                </tr>
+              </thead>
+              <tbody>
+                {branchInsts.map((inst) => {
+                  const values = programs.map((p) => detailMap.get(`${inst.id}-${p.id}`) ?? 0);
+                  const total = values.reduce((s, v) => s + v, 0);
+                  return (
+                    <tr className="border-t border-slate-200" key={inst.id}>
+                      <td className="px-3 py-2 whitespace-nowrap">{inst.name}</td>
+                      {values.map((v, i) => (
+                        <td className={`px-3 py-2 text-right ${v < 0 ? "text-orange-600 font-medium" : ""}`} key={programs[i].id}>{v !== 0 ? v.toLocaleString() : "-"}</td>
+                      ))}
+                      <td className={`px-3 py-2 text-right font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="bg-slate-50 font-semibold">
+                <tr>
+                  <td className="px-3 py-2">합계</td>
+                  {programs.map((p) => {
+                    const total = branchInsts.reduce((s, inst) => s + (detailMap.get(`${inst.id}-${p.id}`) ?? 0), 0);
+                    return <td className={`px-3 py-2 text-right ${total < 0 ? "text-rose-500 font-medium" : ""}`} key={p.id}>{total !== 0 ? total.toLocaleString() : "-"}</td>;
+                  })}
+                  <td className="px-3 py-2 text-right">
+                    {branchInsts.reduce((s, inst) => s + programs.reduce((ss, p) => ss + (detailMap.get(`${inst.id}-${p.id}`) ?? 0), 0), 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SalesViewClient({
   branches, programs, allInstitutions,
   monthlyOrders, issueOrders, viewOnlyOneContracts, salesTargets, targetActualOrders, targetPermissions, onlyOneTargets, onlyOneContracts, institutionOrders,
@@ -79,13 +247,6 @@ export function SalesViewClient({
     ? branches.filter((b) => b.id === selectedBranchId)
     : branches;
 
-  // 온리원 활성 여부 헬퍼
-  function ooActiveInMonth(c: ViewOnlyOneContract, ym: string): boolean {
-    const first = `${ym}-01`;
-    const last = `${ym}-31`;
-    return c.startDate <= last && (c.endDate === null || c.endDate >= first);
-  }
-
   // 월별 그리드: (branchId, YYYY-MM) → 총 부수 (온리원 포함)
   const monthlyGridMap = new Map<string, number>();
   for (const o of monthlyOrders) {
@@ -123,160 +284,6 @@ export function SalesViewClient({
         issueGridMap.set(key, (issueGridMap.get(key) ?? 0) + c.classCount);
       }
     }
-  }
-
-  function DetailModal({
-    title, branchId, filterOrders, filterYM, onClose,
-  }: {
-    title: string;
-    branchId: number;
-    filterOrders: (o: { institutionId: number; programId: number; quantity: number }) => boolean;
-    filterYM: string;
-    onClose: () => void;
-  }) {
-    const branchInsts = allInstitutions.filter((i) => i.branchId === branchId);
-    const detailMap = new Map<string, number>();
-    const allOrders = [...monthlyOrders, ...issueOrders] as { institutionId: number; programId: number; quantity: number }[];
-    for (const o of allOrders) {
-      if (!filterOrders(o)) continue;
-      if (instBranchMap.get(o.institutionId) !== branchId) continue;
-      const key = `${o.institutionId}-${o.programId}`;
-      detailMap.set(key, (detailMap.get(key) ?? 0) + o.quantity);
-    }
-    // 온리원 활성 계약 추가
-    const ooProgram = programs.find(p => p.isOnlyOne);
-    if (ooProgram) {
-      for (const c of viewOnlyOneContracts) {
-        if (c.branchId !== branchId) continue;
-        if (!ooActiveInMonth(c, filterYM)) continue;
-        const key = `${c.institutionId}-${ooProgram.id}`;
-        detailMap.set(key, (detailMap.get(key) ?? 0) + c.classCount);
-      }
-    }
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-        <div className="relative max-h-[80vh] w-full max-w-5xl overflow-auto rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-          <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-            <h2 className="font-semibold text-slate-800">{title}</h2>
-            <button className="text-slate-400 hover:text-slate-700" onClick={onClose}>✕</button>
-          </div>
-          <div className="p-6">
-            {branchInsts.length === 0 ? (
-              <p className="text-sm text-slate-400">등록된 기관이 없습니다.</p>
-            ) : (
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-100">
-                  <tr>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">기관</th>
-                    {programs.map((p) => (
-                      <th className="px-3 py-2 text-right whitespace-nowrap" key={p.id}>{p.name}</th>
-                    ))}
-                    <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">합계</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {branchInsts.map((inst) => {
-                    const values = programs.map((p) => detailMap.get(`${inst.id}-${p.id}`) ?? 0);
-                    const total = values.reduce((s, v) => s + v, 0);
-                    return (
-                      <tr className="border-t border-slate-200" key={inst.id}>
-                        <td className="px-3 py-2 whitespace-nowrap">{inst.name}</td>
-                        {values.map((v, i) => (
-                          <td className={`px-3 py-2 text-right ${v < 0 ? "text-orange-600 font-medium" : ""}`} key={programs[i].id}>{v !== 0 ? v.toLocaleString() : "-"}</td>
-                        ))}
-                        <td className={`px-3 py-2 text-right font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="bg-slate-50 font-semibold">
-                  <tr>
-                    <td className="px-3 py-2">합계</td>
-                    {programs.map((p) => {
-                      const total = branchInsts.reduce((s, inst) => s + (detailMap.get(`${inst.id}-${p.id}`) ?? 0), 0);
-                      return <td className={`px-3 py-2 text-right ${total < 0 ? "text-rose-500 font-medium" : ""}`} key={p.id}>{total !== 0 ? total.toLocaleString() : "-"}</td>;
-                    })}
-                    <td className="px-3 py-2 text-right">
-                      {branchInsts.reduce((s, inst) => s + programs.reduce((ss, p) => ss + (detailMap.get(`${inst.id}-${p.id}`) ?? 0), 0), 0).toLocaleString()}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function GridTable({
-    cols, getCellKey, getCellValue, footerLabel,
-    onCellClick,
-  }: {
-    cols: { key: string; label: string }[];
-    getCellKey: (branchId: number, colKey: string) => string;
-    getCellValue: (mapKey: string) => number;
-    footerLabel: string;
-    onCellClick: (branch: Branch, colKey: string) => void;
-  }) {
-    return (
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="px-3 py-2 text-left">지사</th>
-              {cols.map((c) => (
-                <th className="px-3 py-2 text-right whitespace-nowrap" key={c.key}>{c.label}</th>
-              ))}
-              <th className="px-3 py-2 text-right font-semibold">합계</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleBranches.length === 0 && (
-              <tr><td className="px-3 py-8 text-center text-slate-400" colSpan={cols.length + 2}>데이터가 없습니다.</td></tr>
-            )}
-            {visibleBranches.map((branch) => {
-              const values = cols.map((c) => getCellValue(getCellKey(branch.id, c.key)));
-              const total = values.reduce((s, v) => s + v, 0);
-              return (
-                <tr className="border-t border-slate-200 hover:bg-slate-50" key={branch.id}>
-                  <td className="px-3 py-2 font-medium text-slate-700">{branch.name}</td>
-                  {values.map((v, i) => (
-                    <td className="px-3 py-2 text-right" key={cols[i].key}>
-                      {v !== 0 ? (
-                        <button
-                          className={`font-medium hover:text-blue-600 hover:underline ${v < 0 ? "text-rose-500" : "text-slate-800"}`}
-                          onClick={() => onCellClick(branch, cols[i].key)}
-                        >
-                          {v.toLocaleString()}
-                        </button>
-                      ) : (
-                        <span className="text-slate-300">-</span>
-                      )}
-                    </td>
-                  ))}
-                  <td className={`px-3 py-2 text-right font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          {visibleBranches.length > 0 && (
-            <tfoot className="bg-slate-50 font-semibold">
-              <tr>
-                <td className="px-3 py-2">{footerLabel}</td>
-                {cols.map((c) => {
-                  const total = visibleBranches.reduce((s, b) => s + getCellValue(getCellKey(b.id, c.key)), 0);
-                  return <td className={`px-3 py-2 text-right ${total < 0 ? "text-rose-500" : ""}`} key={c.key}>{total !== 0 ? total.toLocaleString() : "-"}</td>;
-                })}
-                <td className="px-3 py-2 text-right">
-                  {visibleBranches.reduce((s, b) => s + cols.reduce((ss, c) => ss + getCellValue(getCellKey(b.id, c.key)), 0), 0).toLocaleString()}
-                </td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-    );
   }
 
   return (
@@ -317,10 +324,13 @@ export function SalesViewClient({
           >기관 현황</button>
         </div>
         <div className="flex items-center gap-2">
-          <a
+          <button
             className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
-            href={`/api/sales/download?year=${selectedYear}${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}&t=${Date.now()}`}
-          >엑셀 다운로드</a>
+            onClick={() => {
+              const url = `/api/sales/download?year=${selectedYear}${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}&t=${Date.now()}`;
+              window.location.href = url;
+            }}
+          >엑셀 다운로드</button>
           {canEdit && (
             <button
               className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
@@ -338,6 +348,7 @@ export function SalesViewClient({
           getCellValue={(key) => monthlyGridMap.get(key) ?? 0}
           footerLabel="합계"
           onCellClick={(branch, ym) => setMonthlyModal({ branchId: branch.id, branchName: branch.name, ym })}
+          visibleBranches={visibleBranches}
         />
       )}
 
@@ -349,6 +360,7 @@ export function SalesViewClient({
           getCellValue={(key) => issueGridMap.get(key) ?? 0}
           footerLabel="합계"
           onCellClick={(branch, n) => setIssueModal({ branchId: branch.id, branchName: branch.name, issueNumber: Number(n) })}
+          visibleBranches={visibleBranches}
         />
       )}
 
@@ -656,6 +668,12 @@ export function SalesViewClient({
           filterOrders={(o) => (o as MonthlyOrder).orderDate?.startsWith(monthlyModal.ym) ?? false}
           filterYM={monthlyModal.ym}
           onClose={() => setMonthlyModal(null)}
+          allInstitutions={allInstitutions}
+          instBranchMap={instBranchMap}
+          monthlyOrders={monthlyOrders}
+          issueOrders={issueOrders}
+          viewOnlyOneContracts={viewOnlyOneContracts}
+          programs={programs}
         />
       )}
 
@@ -672,6 +690,12 @@ export function SalesViewClient({
             filterOrders={(o) => (o as IssueOrder).issueNumber === issueModal.issueNumber}
             filterYM={filterYM}
             onClose={() => setIssueModal(null)}
+            allInstitutions={allInstitutions}
+            instBranchMap={instBranchMap}
+            monthlyOrders={monthlyOrders}
+            issueOrders={issueOrders}
+            viewOnlyOneContracts={viewOnlyOneContracts}
+            programs={programs}
           />
         );
       })()}

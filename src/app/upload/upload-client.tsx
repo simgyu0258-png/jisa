@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 import type { ErpUnresolvedRow, ErpReturnRow, ErpPreviewResponse } from "@/app/api/upload/erp/preview/route";
@@ -32,7 +33,7 @@ export function UploadClient({ programs }: { programs: Program[] }) {
       {tab === "branch" && (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
           지사 일괄등록은{" "}
-          <a className="underline text-slate-900" href="/branches/bulk">지사 관리 &gt; 일괄 등록</a>
+          <Link className="underline text-slate-900" href="/branches/bulk">지사 관리 &gt; 일괄 등록</Link>
           에서 이용하실 수 있습니다.
         </div>
       )}

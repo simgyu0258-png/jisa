@@ -44,17 +44,23 @@ export function AnalyticsClient({
   issueAgg: IssueAgg[];
   minYear: number;
 }) {
-  const [cards, setCards] = useState<CardConfig[]>([newCard()]);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
+  const [cards, setCards] = useState<CardConfig[]>(() => {
+    if (typeof window === "undefined") return [newCard()];
     try {
       const saved = sessionStorage.getItem(LS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as CardConfig[];
-        if (Array.isArray(parsed) && parsed.length > 0) setCards(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
+    return [newCard()];
+  });
+  const [ready, setReady] = useState(false);
+
+  // 서버/클라이언트 첫 렌더는 null로 일치시키고, 마운트 후에만 sessionStorage 값으로 렌더 (hydration 안전).
+  // newCard()가 crypto.randomUUID()로 비결정적 ID를 만들기 때문에 마운트 게이트가 필수.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 게이트(hydration 안전)용 의도적 setState
     setReady(true);
   }, []);
 
