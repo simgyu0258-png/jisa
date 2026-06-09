@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getCurrentFiscalYear, getFiscalYearRange, getFiscalYearFromDate } from "@/lib/month";
+import { getCurrentFiscalYear, getFiscalYearRange, getFiscalYearFromDate, getIssueAwareDateWhere } from "@/lib/month";
 import { SalesViewClient } from "./sales-view-client";
 
 type Params = {
@@ -46,7 +46,7 @@ export default async function SalesPage({
 
   const issueOrders = view === "issue"
     ? await prisma.saleOrder.findMany({
-        where: { orderDate: { gte, lt } },
+        where: getIssueAwareDateWhere(Number(year)),
         select: { institutionId: true, programId: true, issueNumber: true, quantity: true },
       })
     : [];

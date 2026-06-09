@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { prepareExcelBuffer } from "@/lib/excel-reader";
 import { auth } from "@/auth";
+import { getFiscalYearForIssue } from "@/lib/month";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 
 export type ErpUnresolvedRow = {
@@ -18,11 +19,27 @@ export type ErpUnresolvedRow = {
   institutionId: number;
 };
 
+export type ErpReturnRow = {
+  productName: string;
+  branchName: string;
+  branchId: number;
+  institutionName: string;
+  institutionId: number;
+  isNewInstitution: boolean;
+  programId: number;
+  programName: string;
+  issueNumber: number;
+  quantity: number;
+  originalOrderDate: string;
+  suggestedFiscalYear: number;
+};
+
 export type ErpPreviewResponse = {
   payload: SaleOrderPreviewRow[];
+  returns: ErpReturnRow[];
   unresolved: ErpUnresolvedRow[];
   errors: { row: number; message: string }[];
-  summary: { totalRows: number; validRows: number; unresolvedRows: number; errorRows: number; skippedRows: number };
+  summary: { totalRows: number; validRows: number; returnRows: number; unresolvedRows: number; errorRows: number; skippedRows: number };
 };
 
 function extractIssue(name: string): number | null {
@@ -110,6 +127,7 @@ export async function POST(req: NextRequest) {
 
   // 집계 맵
   const aggMap = new Map<string, SaleOrderPreviewRow>();
+  const returnsAgg = new Map<string, ErpReturnRow>();
   const unresolvedAgg = new Map<string, ErpUnresolvedRow>();
 
   const errors: { row: number; message: string }[] = [];
@@ -176,6 +194,24 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // 음수(반품) — 매핑 완료된 경우 returns로 분리
+    if (qty < 0) {
+      const suggestedFiscalYear = getFiscalYearForIssue(issueNumber, orderDate);
+      const returnKey = `${institutionId}|${programId}|${issueNumber}|${orderDate}`;
+      const existing = returnsAgg.get(returnKey);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        returnsAgg.set(returnKey, {
+          productName, branchName, branchId,
+          institutionName: instName, institutionId, isNewInstitution: isNew,
+          programId, programName: programMap.get(programId)?.name ?? "",
+          issueNumber, quantity: qty, originalOrderDate: orderDate, suggestedFiscalYear,
+        });
+      }
+      continue;
+    }
+
     const aggKey = `${institutionId}|${programId}|${issueNumber}|${orderDate}`;
     const existing = aggMap.get(aggKey);
     if (existing) {
@@ -190,15 +226,18 @@ export async function POST(req: NextRequest) {
   }
 
   const payload = [...aggMap.values()];
+  const returns = [...returnsAgg.values()];
   const unresolved = [...unresolvedAgg.values()];
 
   return NextResponse.json({
     payload,
+    returns,
     unresolved,
     errors,
     summary: {
       totalRows: dataRows.filter((r) => String((r as unknown[])[col("품목명")] ?? "").trim()).length,
       validRows: payload.length,
+      returnRows: returns.length,
       unresolvedRows: unresolved.length,
       errorRows: errors.length,
       skippedRows: skipped,

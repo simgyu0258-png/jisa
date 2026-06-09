@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SaleOrderPreviewRow, SaleOrderPreviewResponse } from "@/app/api/sales/excel/preview/route";
-import type { ErpUnresolvedRow, ErpPreviewResponse } from "@/app/api/upload/erp/preview/route";
+import type { ErpUnresolvedRow, ErpReturnRow, ErpPreviewResponse } from "@/app/api/upload/erp/preview/route";
 
 type Tab = "erp" | "branch";
 
@@ -40,22 +40,27 @@ export function UploadClient({ programs }: { programs: Program[] }) {
   );
 }
 
-type PreviewSection = "valid" | "skipped" | "errors" | "unresolved";
+type PreviewSection = "valid" | "skipped" | "errors" | "unresolved" | "returns";
 
 function ErpPreviewPanel({
-  preview, programs, resolvedMap, setResolvedMap, loading, canApply, resolvedCount, onApply,
+  preview, programs, resolvedMap, setResolvedMap, returnFiscalYears, setReturnFiscalYears, loading, canApply, resolvedCount, onApply,
 }: {
   preview: ErpPreviewResponse;
   programs: Program[];
   resolvedMap: Record<string, { programId: number; issueNumber: number }>;
   setResolvedMap: React.Dispatch<React.SetStateAction<Record<string, { programId: number; issueNumber: number }>>>;
+  returnFiscalYears: Record<number, number>;
+  setReturnFiscalYears: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   loading: boolean;
   canApply: boolean;
   resolvedCount: number;
   onApply: () => void;
 }) {
   const [active, setActive] = useState<PreviewSection | null>(
-    preview.unresolved.length > 0 ? "unresolved" : preview.errors.length > 0 ? "errors" : "valid"
+    preview.unresolved.length > 0 ? "unresolved"
+      : preview.returns.length > 0 ? "returns"
+      : preview.errors.length > 0 ? "errors"
+      : "valid"
   );
 
   function toggle(section: PreviewSection) {
@@ -64,6 +69,7 @@ function ErpPreviewPanel({
 
   const chips: { key: PreviewSection; label: string; count: number; color: string; activeColor: string }[] = [
     { key: "valid", label: "유효", count: preview.summary.validRows, color: "border-emerald-200 text-emerald-700 hover:bg-emerald-50", activeColor: "bg-emerald-700 text-white border-emerald-700" },
+    { key: "returns", label: "반품", count: preview.returns.length, color: "border-orange-200 text-orange-600 hover:bg-orange-50", activeColor: "bg-orange-600 text-white border-orange-600" },
     { key: "skipped", label: "건너뜀", count: preview.summary.skippedRows, color: "border-slate-200 text-slate-500 hover:bg-slate-50", activeColor: "bg-slate-600 text-white border-slate-600" },
     { key: "errors", label: "오류", count: preview.summary.errorRows, color: "border-rose-200 text-rose-600 hover:bg-rose-50", activeColor: "bg-rose-600 text-white border-rose-600" },
     { key: "unresolved", label: "미매핑", count: preview.unresolved.length, color: "border-amber-200 text-amber-600 hover:bg-amber-50", activeColor: "bg-amber-500 text-white border-amber-500" },
@@ -91,6 +97,13 @@ function ErpPreviewPanel({
       {active && (
         <div className="p-5">
           {active === "valid" && <ValidSection rows={preview.payload} />}
+          {active === "returns" && (
+            <ReturnSection
+              rows={preview.returns}
+              fiscalYears={returnFiscalYears}
+              setFiscalYears={setReturnFiscalYears}
+            />
+          )}
           {active === "skipped" && (
             <p className="text-sm text-slate-500">
               ERP 제외 규칙에 의해 {preview.summary.skippedRows.toLocaleString()}건이 처리되지 않았습니다.
@@ -125,7 +138,7 @@ function ErpPreviewPanel({
           onClick={onApply}
           type="button"
         >
-          {loading ? "처리 중..." : `${(preview.payload.length + resolvedCount).toLocaleString()}건 적용`}
+          {loading ? "처리 중..." : `${(preview.payload.length + resolvedCount + preview.returns.length).toLocaleString()}건 적용`}
         </button>
       </div>
     </section>
@@ -206,6 +219,87 @@ function ValidSection({ rows }: { rows: SaleOrderPreviewRow[] }) {
   );
 }
 
+function ReturnSection({
+  rows, fiscalYears, setFiscalYears,
+}: {
+  rows: ErpReturnRow[];
+  fiscalYears: Record<number, number>;
+  setFiscalYears: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+}) {
+  const allSuggested = rows.map((r) => r.suggestedFiscalYear);
+  const fyOptions = [...new Set(allSuggested.flatMap((fy) => [fy - 1, fy, fy + 1]))].sort();
+
+  function applyAllSuggested() {
+    const all: Record<number, number> = {};
+    rows.forEach((r, i) => { all[i] = r.suggestedFiscalYear; });
+    setFiscalYears(all);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <p className="text-xs text-slate-500">
+          귀속 회계연도를 확인하세요. 시스템이 issueNumber 기준으로 자동 계산한 연도가 미리 선택되어 있습니다.
+        </p>
+        <button
+          type="button"
+          onClick={applyAllSuggested}
+          className="shrink-0 rounded border border-orange-300 px-3 py-1 text-xs text-orange-700 hover:bg-orange-50"
+        >
+          전체 자동계산 적용
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded border border-orange-200 max-h-80 overflow-y-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-orange-50 text-orange-800 sticky top-0">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium">품목명</th>
+              <th className="px-3 py-2 text-left font-medium">지사</th>
+              <th className="px-3 py-2 text-left font-medium">기관</th>
+              <th className="px-3 py-2 text-center font-medium">호</th>
+              <th className="px-3 py-2 text-center font-medium">수량</th>
+              <th className="px-3 py-2 text-center font-medium">원본 일자</th>
+              <th className="px-3 py-2 text-center font-medium">귀속 연도</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const selected = fiscalYears[i] ?? r.suggestedFiscalYear;
+              const isOverridden = selected !== r.suggestedFiscalYear;
+              return (
+                <tr className="border-t border-orange-100" key={i}>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-700">{r.productName}</td>
+                  <td className="px-3 py-2 text-slate-600">{r.branchName}</td>
+                  <td className="px-3 py-2 text-slate-600">
+                    {r.institutionName}
+                    {r.isNewInstitution && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">신규</span>}
+                  </td>
+                  <td className="px-3 py-2 text-center">{r.issueNumber}호</td>
+                  <td className="px-3 py-2 text-center font-medium text-rose-600">{r.quantity.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-center text-xs text-slate-400">{r.originalOrderDate}</td>
+                  <td className="px-3 py-2">
+                    <select
+                      className={`w-full text-sm rounded border px-1.5 py-0.5 ${isOverridden ? "border-orange-400 bg-orange-50" : "border-slate-200"}`}
+                      value={selected}
+                      onChange={(e) => setFiscalYears((prev) => ({ ...prev, [i]: Number(e.target.value) }))}
+                    >
+                      {fyOptions.map((fy) => (
+                        <option key={fy} value={fy}>
+                          {fy}년{fy === r.suggestedFiscalYear ? " (자동)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function UnresolvedSection({
   rows, programs, resolvedMap, setResolvedMap,
 }: {
@@ -281,8 +375,8 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ErpPreviewResponse | null>(null);
   const [message, setMessage] = useState("");
-  // 미매핑 항목의 수동 지정: key=productName, value={programId, issueNumber}
   const [resolvedMap, setResolvedMap] = useState<Record<string, { programId: number; issueNumber: number }>>({});
+  const [returnFiscalYears, setReturnFiscalYears] = useState<Record<number, number>>({});
 
   async function handlePreview(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -290,11 +384,15 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
     setMessage("");
     setPreview(null);
     setResolvedMap({});
+    setReturnFiscalYears({});
     try {
       const res = await fetch("/api/upload/erp/preview", { method: "POST", body: new FormData(e.currentTarget) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "미리보기 실패");
       setPreview(data);
+      const initFYs: Record<number, number> = {};
+      (data.returns as ErpReturnRow[]).forEach((r, i) => { initFYs[i] = r.suggestedFiscalYear; });
+      setReturnFiscalYears(initFYs);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "오류가 발생했습니다.");
     } finally {
@@ -321,10 +419,21 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
           isNewInstitution: u.isNewInstitution,
         }));
 
+      const returns = preview.returns.map((r, i) => ({
+        institutionId: r.institutionId,
+        institutionName: r.institutionName,
+        branchId: r.branchId,
+        isNewInstitution: r.isNewInstitution,
+        programId: r.programId,
+        issueNumber: r.issueNumber,
+        quantity: r.quantity,
+        fiscalYear: returnFiscalYears[i] ?? r.suggestedFiscalYear,
+      }));
+
       const res = await fetch("/api/upload/erp/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: preview.payload, newMappings }),
+        body: JSON.stringify({ payload: preview.payload, newMappings, returns }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "적용 실패");
@@ -343,7 +452,7 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
 
   const unresolvedCount = preview?.unresolved.length ?? 0;
   const resolvedCount = Object.keys(resolvedMap).length;
-  const canApply = preview && (preview.payload.length > 0 || resolvedCount > 0);
+  const canApply = preview && (preview.payload.length > 0 || resolvedCount > 0 || preview.returns.length > 0);
 
   return (
     <div className="space-y-4">
@@ -383,6 +492,8 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
           programs={programs}
           resolvedMap={resolvedMap}
           setResolvedMap={setResolvedMap}
+          returnFiscalYears={returnFiscalYears}
+          setReturnFiscalYears={setReturnFiscalYears}
           loading={loading}
           canApply={!!canApply}
           resolvedCount={resolvedCount}

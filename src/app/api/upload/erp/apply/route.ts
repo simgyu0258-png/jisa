@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getIssueCanonicalDate } from "@/lib/month";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 
 type NewMapping = {
@@ -17,6 +18,17 @@ type NewMapping = {
   isNewInstitution: boolean;
 };
 
+type ReturnApplyRow = {
+  institutionId: number;
+  institutionName: string;
+  branchId: number;
+  isNewInstitution: boolean;
+  programId: number;
+  issueNumber: number;
+  quantity: number;
+  fiscalYear: number;
+};
+
 export async function POST(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "인증 필요" }, { status: 401 });
@@ -24,12 +36,14 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     payload?: SaleOrderPreviewRow[];
     newMappings?: NewMapping[];
+    returns?: ReturnApplyRow[];
   };
 
   const payload = body.payload ?? [];
   const newMappings = body.newMappings ?? [];
+  const returnRows = body.returns ?? [];
 
-  if (payload.length === 0 && newMappings.length === 0) {
+  if (payload.length === 0 && newMappings.length === 0 && returnRows.length === 0) {
     return NextResponse.json({ error: "잘못된 payload" }, { status: 400 });
   }
 
@@ -43,6 +57,12 @@ export async function POST(request: Request) {
       institutionName: m.institutionName,
       branchId: m.branchId,
       isNewInstitution: m.isNewInstitution,
+    })),
+    ...returnRows.map((r) => ({
+      institutionId: r.institutionId,
+      institutionName: r.institutionName,
+      branchId: r.branchId,
+      isNewInstitution: r.isNewInstitution,
     })),
   ];
 
@@ -98,6 +118,24 @@ export async function POST(request: Request) {
       },
       create: { institutionId, programId: row.programId, issueNumber: row.issueNumber, orderDate: row.orderDate, quantity: row.quantity },
       update: { quantity: row.quantity },
+    });
+    upsertedCount++;
+  }
+
+  // 반품 처리 — 귀속 회계연도의 canonical orderDate로 저장
+  for (const r of returnRows) {
+    const institutionId = r.isNewInstitution
+      ? newInstMap.get(`${r.branchId}::${r.institutionName}`)!
+      : r.institutionId;
+    const orderDate = getIssueCanonicalDate(r.issueNumber, r.fiscalYear);
+    await prisma.saleOrder.upsert({
+      where: {
+        institutionId_programId_issueNumber_orderDate: {
+          institutionId, programId: r.programId, issueNumber: r.issueNumber, orderDate,
+        },
+      },
+      create: { institutionId, programId: r.programId, issueNumber: r.issueNumber, orderDate, quantity: r.quantity },
+      update: { quantity: r.quantity },
     });
     upsertedCount++;
   }

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { DashboardCharts } from "@/components/dashboard-charts";
-import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange, getCurrentFiscalIssue } from "@/lib/month";
+import { getCurrentYearMonth, getPreviousYearMonth, getSameMonthLastYear, getRecentMonths, getCurrentFiscalYear, getFiscalYearRange, getCurrentFiscalIssue, getIssueAwareDateWhere } from "@/lib/month";
 import { DashboardSummaryCards } from "@/components/dashboard-summary-cards";
 import { prisma } from "@/lib/prisma";
 
@@ -69,7 +69,7 @@ export default async function HomePage() {
       }),
       prisma.saleOrder.groupBy({
         by: ["issueNumber"],
-        where: { orderDate: { gte: fyGte, lt: fyLt } },
+        where: getIssueAwareDateWhere(currentYear),
         _sum: { quantity: true },
         orderBy: { issueNumber: "asc" },
       }),
@@ -110,7 +110,7 @@ export default async function HomePage() {
   // 호별 막대 (기존 SaleOrder 기반 유지, 온리원은 호 개념 없음)
   const issueBars = byIssue.map((x) => ({
     issue: `${x.issueNumber}호`,
-    quantity: x._sum.quantity ?? 0,
+    quantity: x._sum?.quantity ?? 0,
   }));
 
   // 월별 추이 차트 (온리원 포함)
