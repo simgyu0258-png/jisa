@@ -183,9 +183,9 @@ export function SalesViewClient({
                       <tr className="border-t border-slate-200" key={inst.id}>
                         <td className="px-3 py-2 whitespace-nowrap">{inst.name}</td>
                         {values.map((v, i) => (
-                          <td className="px-3 py-2 text-right" key={programs[i].id}>{v > 0 ? v.toLocaleString() : "-"}</td>
+                          <td className={`px-3 py-2 text-right ${v < 0 ? "text-orange-600 font-medium" : ""}`} key={programs[i].id}>{v !== 0 ? v.toLocaleString() : "-"}</td>
                         ))}
-                        <td className="px-3 py-2 text-right font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
+                        <td className={`px-3 py-2 text-right font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
                       </tr>
                     );
                   })}
@@ -195,7 +195,7 @@ export function SalesViewClient({
                     <td className="px-3 py-2">합계</td>
                     {programs.map((p) => {
                       const total = branchInsts.reduce((s, inst) => s + (detailMap.get(`${inst.id}-${p.id}`) ?? 0), 0);
-                      return <td className="px-3 py-2 text-right" key={p.id}>{total > 0 ? total.toLocaleString() : "-"}</td>;
+                      return <td className={`px-3 py-2 text-right ${total < 0 ? "text-rose-500 font-medium" : ""}`} key={p.id}>{total !== 0 ? total.toLocaleString() : "-"}</td>;
                     })}
                     <td className="px-3 py-2 text-right">
                       {branchInsts.reduce((s, inst) => s + programs.reduce((ss, p) => ss + (detailMap.get(`${inst.id}-${p.id}`) ?? 0), 0), 0).toLocaleString()}
@@ -245,9 +245,9 @@ export function SalesViewClient({
                   <td className="px-3 py-2 font-medium text-slate-700">{branch.name}</td>
                   {values.map((v, i) => (
                     <td className="px-3 py-2 text-right" key={cols[i].key}>
-                      {v > 0 ? (
+                      {v !== 0 ? (
                         <button
-                          className="font-medium text-slate-800 hover:text-blue-600 hover:underline"
+                          className={`font-medium hover:text-blue-600 hover:underline ${v < 0 ? "text-rose-500" : "text-slate-800"}`}
                           onClick={() => onCellClick(branch, cols[i].key)}
                         >
                           {v.toLocaleString()}
@@ -257,7 +257,7 @@ export function SalesViewClient({
                       )}
                     </td>
                   ))}
-                  <td className="px-3 py-2 text-right font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
+                  <td className={`px-3 py-2 text-right font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
                 </tr>
               );
             })}
@@ -268,7 +268,7 @@ export function SalesViewClient({
                 <td className="px-3 py-2">{footerLabel}</td>
                 {cols.map((c) => {
                   const total = visibleBranches.reduce((s, b) => s + getCellValue(getCellKey(b.id, c.key)), 0);
-                  return <td className="px-3 py-2 text-right" key={c.key}>{total > 0 ? total.toLocaleString() : "-"}</td>;
+                  return <td className={`px-3 py-2 text-right ${total < 0 ? "text-rose-500" : ""}`} key={c.key}>{total !== 0 ? total.toLocaleString() : "-"}</td>;
                 })}
                 <td className="px-3 py-2 text-right">
                   {visibleBranches.reduce((s, b) => s + cols.reduce((ss, c) => ss + getCellValue(getCellKey(b.id, c.key)), 0), 0).toLocaleString()}
@@ -566,11 +566,11 @@ export function SalesViewClient({
                           >{inst.name}</button>
                         </td>
                         {values.map((v, i) => (
-                          <td className={`px-3 py-2 text-center ${v === 0 ? "bg-rose-50 text-rose-400" : "text-slate-700"}`} key={issueNumbers[i]}>
-                            {v > 0 ? v.toLocaleString() : "✕"}
+                          <td className={`px-3 py-2 text-center ${v === 0 ? "bg-rose-50 text-rose-400" : v < 0 ? "text-orange-600 font-medium" : "text-slate-700"}`} key={issueNumbers[i]}>
+                            {v === 0 ? "✕" : v.toLocaleString()}
                           </td>
                         ))}
-                        <td className="px-3 py-2 text-center font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
+                        <td className={`px-3 py-2 text-center font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
                       </tr>
                     );
                   })}
@@ -633,11 +633,11 @@ export function SalesViewClient({
                               <tr className={`border-t border-slate-200 ${!hasAny ? "opacity-40" : ""}`} key={p.id}>
                                 <td className="px-3 py-2 whitespace-nowrap font-medium text-slate-700">{p.name}</td>
                                 {values.map((v, i) => (
-                                  <td className={`px-3 py-2 text-center ${v === null ? "text-slate-200" : v === 0 ? "bg-rose-50 text-rose-400" : "text-slate-700"}`} key={issueNumbers[i]}>
-                                    {v === null ? "—" : v > 0 ? v.toLocaleString() : "✕"}
+                                  <td className={`px-3 py-2 text-center ${v === null ? "text-slate-200" : v === 0 ? "bg-rose-50 text-rose-400" : v < 0 ? "text-orange-600 font-medium" : "text-slate-700"}`} key={issueNumbers[i]}>
+                                    {v === null ? "—" : v === 0 ? "✕" : v.toLocaleString()}
                                   </td>
                                 ))}
-                                <td className="px-3 py-2 text-center font-semibold">{total > 0 ? total.toLocaleString() : "-"}</td>
+                                <td className={`px-3 py-2 text-center font-semibold ${total < 0 ? "text-rose-500" : ""}`}>{total !== 0 ? total.toLocaleString() : "-"}</td>
                               </tr>
                             );
                           })}

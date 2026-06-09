@@ -6,7 +6,6 @@
 
 - **기술 스택**: Next.js 16 (App Router, TypeScript) · Prisma 6 + PostgreSQL (Supabase) · React 19.2 · Tailwind CSS 4 · recharts · xlsx · exceljs · office-crypto
 - **DB**: PostgreSQL (Supabase) — `DATABASE_URL` / `DIRECT_URL` 환경변수
-- **빌드 출력**: `.next-jisa/` (next.config.ts의 `distDir` 커스텀)
 - **배포**: Vercel (GitHub 연동 자동 배포) — `simgyu0258-png/jisa` 저장소
 
 ## 개발 환경
@@ -201,7 +200,7 @@ Client Component에서 Server Action을 쓰려면 별도 파일에 `'use server'
 
 ## 주의사항
 
-- `distDir: '.next-jisa'`로 빌드 출력 경로가 커스텀되어 있음
+- `next.config.ts`에 `serverExternalPackages: ["office-crypto"]` 설정 — ESM 전용 패키지를 webpack이 번들링하지 않도록 외부 처리
 - ERP 거래처명 정규화: `㈜` → `(주)`, `㈔` → `(사)` (`normalizeName` 함수 적용)
 - 온리원 SaleOrder가 DB에 남아 있더라도 집계 시 `isOnlyOne: false` 필터로 이중 집계 방지
 - 판매 현황 `viewOnlyOneContracts`는 회계연도 내 겹치는 계약 전체 조회 (활성 여부는 클라이언트에서 월별 필터)
