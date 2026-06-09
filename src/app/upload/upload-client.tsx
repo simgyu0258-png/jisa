@@ -40,6 +40,243 @@ export function UploadClient({ programs }: { programs: Program[] }) {
   );
 }
 
+type PreviewSection = "valid" | "skipped" | "errors" | "unresolved";
+
+function ErpPreviewPanel({
+  preview, programs, resolvedMap, setResolvedMap, loading, canApply, resolvedCount, onApply,
+}: {
+  preview: ErpPreviewResponse;
+  programs: Program[];
+  resolvedMap: Record<string, { programId: number; issueNumber: number }>;
+  setResolvedMap: React.Dispatch<React.SetStateAction<Record<string, { programId: number; issueNumber: number }>>>;
+  loading: boolean;
+  canApply: boolean;
+  resolvedCount: number;
+  onApply: () => void;
+}) {
+  const [active, setActive] = useState<PreviewSection | null>(
+    preview.unresolved.length > 0 ? "unresolved" : preview.errors.length > 0 ? "errors" : "valid"
+  );
+
+  function toggle(section: PreviewSection) {
+    setActive((prev) => (prev === section ? null : section));
+  }
+
+  const chips: { key: PreviewSection; label: string; count: number; color: string; activeColor: string }[] = [
+    { key: "valid", label: "유효", count: preview.summary.validRows, color: "border-emerald-200 text-emerald-700 hover:bg-emerald-50", activeColor: "bg-emerald-700 text-white border-emerald-700" },
+    { key: "skipped", label: "건너뜀", count: preview.summary.skippedRows, color: "border-slate-200 text-slate-500 hover:bg-slate-50", activeColor: "bg-slate-600 text-white border-slate-600" },
+    { key: "errors", label: "오류", count: preview.summary.errorRows, color: "border-rose-200 text-rose-600 hover:bg-rose-50", activeColor: "bg-rose-600 text-white border-rose-600" },
+    { key: "unresolved", label: "미매핑", count: preview.unresolved.length, color: "border-amber-200 text-amber-600 hover:bg-amber-50", activeColor: "bg-amber-500 text-white border-amber-500" },
+  ];
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white">
+      <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+        <h2 className="font-semibold text-slate-800">미리보기</h2>
+        <div className="flex items-center gap-2">
+          {chips.map(({ key, label, count, color, activeColor }) => (
+            <button
+              key={key}
+              type="button"
+              disabled={count === 0}
+              onClick={() => toggle(key)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-default ${active === key ? activeColor : color}`}
+            >
+              {label} {count.toLocaleString()}건
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {active && (
+        <div className="p-5">
+          {active === "valid" && <ValidSection rows={preview.payload} />}
+          {active === "skipped" && (
+            <p className="text-sm text-slate-500">
+              ERP 제외 규칙에 의해 {preview.summary.skippedRows.toLocaleString()}건이 처리되지 않았습니다.
+              규칙은 <a href="/erp-rules" className="underline text-slate-700">ERP 규칙 관리</a>에서 설정할 수 있습니다.
+            </p>
+          )}
+          {active === "errors" && (
+            <ul className="space-y-1 text-sm text-rose-700 max-h-80 overflow-y-auto">
+              {preview.errors.map((e, i) => (
+                <li key={i} className="border-b border-rose-100 pb-1 last:border-0">
+                  {e.row > 0 ? <span className="mr-1 text-rose-400 text-xs">{e.row}행</span> : null}
+                  {e.message}
+                </li>
+              ))}
+            </ul>
+          )}
+          {active === "unresolved" && (
+            <UnresolvedSection
+              rows={preview.unresolved}
+              programs={programs}
+              resolvedMap={resolvedMap}
+              setResolvedMap={setResolvedMap}
+            />
+          )}
+        </div>
+      )}
+
+      <div className="border-t border-slate-100 px-5 py-4">
+        <button
+          className="rounded-md bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50"
+          disabled={loading || !canApply}
+          onClick={onApply}
+          type="button"
+        >
+          {loading ? "처리 중..." : `${(preview.payload.length + resolvedCount).toLocaleString()}건 적용`}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function ValidSection({ rows }: { rows: SaleOrderPreviewRow[] }) {
+  const grouped = rows.reduce<Record<string, SaleOrderPreviewRow[]>>((acc, row) => {
+    (acc[row.branchName] ??= []).push(row);
+    return acc;
+  }, {});
+  const branchNames = Object.keys(grouped);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  function toggle(name: string) {
+    setExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
+  }
+
+  return (
+    <div className="rounded border border-slate-200 overflow-hidden text-sm max-h-[500px] overflow-y-auto">
+      {branchNames.map((branchName) => {
+        const branchRows = grouped[branchName];
+        const isOpen = !!expanded[branchName];
+        const newCount = branchRows.filter((r) => r.isNewInstitution).length;
+        return (
+          <div key={branchName} className="border-b border-slate-100 last:border-b-0">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-left"
+              onClick={() => toggle(branchName)}
+            >
+              <span className="font-medium text-slate-800">
+                <span className="mr-2 text-slate-400 text-xs">{isOpen ? "▼" : "▶"}</span>
+                {branchName}
+              </span>
+              <span className="flex items-center gap-2 text-xs text-slate-500">
+                {newCount > 0 && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">신규 {newCount}건</span>
+                )}
+                <span>{branchRows.length.toLocaleString()}건</span>
+              </span>
+            </button>
+            {isOpen && (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-white text-slate-500 border-b border-slate-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">기관</th>
+                      <th className="px-3 py-2 text-left font-medium">프로그램</th>
+                      <th className="px-3 py-2 text-center font-medium">호</th>
+                      <th className="px-3 py-2 text-center font-medium">주문일</th>
+                      <th className="px-3 py-2 text-right font-medium">부수</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {branchRows.map((row, i) => (
+                      <tr className="border-t border-slate-100" key={i}>
+                        <td className="px-3 py-2">
+                          {row.institutionName}
+                          {row.isNewInstitution && (
+                            <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">신규</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-slate-600">{row.programName}</td>
+                        <td className="px-3 py-2 text-center">{row.issueNumber}호</td>
+                        <td className="px-3 py-2 text-center">{row.orderDate}</td>
+                        <td className="px-3 py-2 text-right">{row.quantity.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function UnresolvedSection({
+  rows, programs, resolvedMap, setResolvedMap,
+}: {
+  rows: ErpUnresolvedRow[];
+  programs: Program[];
+  resolvedMap: Record<string, { programId: number; issueNumber: number }>;
+  setResolvedMap: React.Dispatch<React.SetStateAction<Record<string, { programId: number; issueNumber: number }>>>;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-slate-400">프로그램과 호를 지정하면 매핑이 저장되어 다음 업로드부터 자동 처리됩니다.</p>
+      <div className="overflow-x-auto rounded border border-amber-200 max-h-80 overflow-y-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-amber-50 text-amber-800 sticky top-0">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium">품목명</th>
+              <th className="px-3 py-2 text-left font-medium">지사</th>
+              <th className="px-3 py-2 text-left font-medium">기관</th>
+              <th className="px-3 py-2 text-center font-medium">수량</th>
+              <th className="px-3 py-2 text-center font-medium">프로그램</th>
+              <th className="px-3 py-2 text-center font-medium">호</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((u, i) => {
+              const r = resolvedMap[u.productName];
+              return (
+                <tr className="border-t border-amber-100" key={i}>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-700">{u.productName}</td>
+                  <td className="px-3 py-2 text-slate-600">{u.branchName}</td>
+                  <td className="px-3 py-2 text-slate-600">
+                    {u.institutionName}
+                    {u.isNewInstitution && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">신규</span>}
+                  </td>
+                  <td className="px-3 py-2 text-center">{u.quantity.toLocaleString()}</td>
+                  <td className="px-3 py-2">
+                    <select
+                      className="w-full text-sm"
+                      value={r?.programId ?? ""}
+                      onChange={(e) => setResolvedMap((prev) => ({
+                        ...prev,
+                        [u.productName]: { programId: Number(e.target.value), issueNumber: prev[u.productName]?.issueNumber ?? 0 },
+                      }))}
+                    >
+                      <option value="">선택</option>
+                      {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      className="w-16 text-center text-sm"
+                      min={1}
+                      placeholder="호"
+                      type="number"
+                      value={r?.issueNumber || ""}
+                      onChange={(e) => setResolvedMap((prev) => ({
+                        ...prev,
+                        [u.productName]: { programId: prev[u.productName]?.programId ?? 0, issueNumber: Number(e.target.value) },
+                      }))}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => void }) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ErpPreviewResponse | null>(null);
@@ -141,137 +378,16 @@ function ErpUpload({ programs, onDone }: { programs: Program[]; onDone: () => vo
       </section>
 
       {preview && (
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">미리보기</h2>
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <span>유효 <strong className="text-emerald-700">{preview.summary.validRows}건</strong></span>
-              {unresolvedCount > 0 && (
-                <span>미매핑 <strong className="text-amber-600">{unresolvedCount}건</strong></span>
-              )}
-              {preview.summary.skippedRows > 0 && <span>건너뜀 {preview.summary.skippedRows}건</span>}
-              {preview.summary.errorRows > 0 && <span className="text-rose-600">오류 {preview.summary.errorRows}건</span>}
-            </div>
-          </div>
-          <div className="p-5 space-y-5">
-            {/* 오류 목록 */}
-            {preview.errors.length > 0 && (
-              <ul className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 space-y-1">
-                {preview.errors.map((e) => (
-                  <li key={`${e.row}-${e.message}`}>{e.row > 0 ? `${e.row}행: ` : ""}{e.message}</li>
-                ))}
-              </ul>
-            )}
-
-            {/* 미매핑 항목 */}
-            {unresolvedCount > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-amber-700">미매핑 품목명 ({unresolvedCount}건)</h3>
-                  <span className="text-xs text-slate-400">프로그램과 호를 지정하면 매핑이 저장되어 다음 업로드부터 자동 처리됩니다.</span>
-                </div>
-                <div className="overflow-x-auto rounded border border-amber-200 bg-amber-50">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-amber-100 text-amber-800">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">품목명</th>
-                        <th className="px-3 py-2 text-left font-medium">지사</th>
-                        <th className="px-3 py-2 text-left font-medium">기관</th>
-                        <th className="px-3 py-2 text-center font-medium">수량</th>
-                        <th className="px-3 py-2 text-center font-medium">프로그램</th>
-                        <th className="px-3 py-2 text-center font-medium">호</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {preview.unresolved.map((u, i) => {
-                        const r = resolvedMap[u.productName];
-                        return (
-                          <tr className="border-t border-amber-200" key={i}>
-                            <td className="px-3 py-2 font-mono text-xs text-slate-700">{u.productName}</td>
-                            <td className="px-3 py-2 text-slate-600">{u.branchName}</td>
-                            <td className="px-3 py-2 text-slate-600">
-                              {u.institutionName}
-                              {u.isNewInstitution && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">신규</span>}
-                            </td>
-                            <td className="px-3 py-2 text-center">{u.quantity.toLocaleString()}</td>
-                            <td className="px-3 py-2">
-                              <select
-                                className="w-full text-sm"
-                                value={r?.programId ?? ""}
-                                onChange={(e) => setResolvedMap((prev) => ({
-                                  ...prev,
-                                  [u.productName]: { programId: Number(e.target.value), issueNumber: prev[u.productName]?.issueNumber ?? 0 },
-                                }))}
-                              >
-                                <option value="">선택</option>
-                                {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                className="w-16 text-center text-sm"
-                                min={1}
-                                placeholder="호"
-                                type="number"
-                                value={r?.issueNumber || ""}
-                                onChange={(e) => setResolvedMap((prev) => ({
-                                  ...prev,
-                                  [u.productName]: { programId: prev[u.productName]?.programId ?? 0, issueNumber: Number(e.target.value) },
-                                }))}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* 유효 행 테이블 */}
-            {preview.payload.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-slate-600">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">지사</th>
-                      <th className="px-3 py-2 text-left font-medium">기관</th>
-                      <th className="px-3 py-2 text-left font-medium">프로그램</th>
-                      <th className="px-3 py-2 text-center font-medium">호</th>
-                      <th className="px-3 py-2 text-center font-medium">주문일</th>
-                      <th className="px-3 py-2 text-right font-medium">부수</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.payload.map((row: SaleOrderPreviewRow, i) => (
-                      <tr className="border-t border-slate-100" key={i}>
-                        <td className="px-3 py-2 text-slate-500">{row.branchName}</td>
-                        <td className="px-3 py-2">
-                          {row.institutionName}
-                          {row.isNewInstitution && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">신규</span>}
-                        </td>
-                        <td className="px-3 py-2">{row.programName}</td>
-                        <td className="px-3 py-2 text-center">{row.issueNumber}호</td>
-                        <td className="px-3 py-2 text-center">{row.orderDate}</td>
-                        <td className="px-3 py-2 text-right">{row.quantity.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <button
-              className="rounded-md bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50"
-              disabled={loading || !canApply}
-              onClick={handleApply}
-              type="button"
-            >
-              {loading ? "처리 중..." : `${(preview.payload.length + resolvedCount)}건 적용`}
-            </button>
-          </div>
-        </section>
+        <ErpPreviewPanel
+          preview={preview}
+          programs={programs}
+          resolvedMap={resolvedMap}
+          setResolvedMap={setResolvedMap}
+          loading={loading}
+          canApply={!!canApply}
+          resolvedCount={resolvedCount}
+          onApply={handleApply}
+        />
       )}
 
       {message && (
