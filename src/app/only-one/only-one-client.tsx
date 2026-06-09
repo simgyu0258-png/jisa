@@ -147,76 +147,81 @@ export function OnlyOneClient({
         </table>
       </div>
 
-      {/* 일괄등록 */}
+      {/* 일괄등록 모달 */}
       {showUpload && (
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">일괄등록</h2>
-            <a className="text-sm text-slate-500 underline hover:text-slate-700" href={`/api/only-one/template?t=${Date.now()}`}>양식 다운로드</a>
-          </div>
-          <div className="p-5 space-y-4">
-            <form className="space-y-2" onSubmit={handlePreview}>
-              <div className="flex flex-wrap gap-2">
-                <input accept=".xlsx,.xls" name="file" required type="file" />
-                <input
-                  className="w-48 text-sm"
-                  name="password"
-                  placeholder="파일 비밀번호 (없으면 빈칸)"
-                  type="password"
-                />
-                <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={loading} type="submit">
-                  {loading ? "처리 중..." : "미리보기"}
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setShowUpload(false); setPreview(null); setUploadMessage(""); }}>
+          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 flex items-center justify-between rounded-t-xl border-b border-slate-200 bg-white px-6 py-4">
+              <h2 className="font-semibold text-slate-800">온리원 계약 일괄등록</h2>
+              <div className="flex items-center gap-3">
+                <a className="text-sm text-slate-500 underline hover:text-slate-700" href={`/api/only-one/template?t=${Date.now()}`}>양식 다운로드</a>
+                <button className="text-slate-400 hover:text-slate-700" onClick={() => { setShowUpload(false); setPreview(null); setUploadMessage(""); }}>✕</button>
               </div>
-            </form>
-            {preview && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm text-slate-600">
-                  <span>유효 <strong className="text-emerald-700">{preview.summary.validRows}건</strong></span>
-                  {preview.summary.errorRows > 0 && <span className="text-rose-600">오류 {preview.summary.errorRows}건</span>}
+            </div>
+            <div className="overflow-y-auto p-6 space-y-4">
+              <form className="space-y-2" onSubmit={handlePreview}>
+                <div className="flex flex-wrap gap-2">
+                  <input accept=".xlsx,.xls" name="file" required type="file" />
+                  <input
+                    className="w-48 text-sm"
+                    name="password"
+                    placeholder="파일 비밀번호 (없으면 빈칸)"
+                    type="password"
+                  />
+                  <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={loading} type="submit">
+                    {loading ? "처리 중..." : "미리보기"}
+                  </button>
                 </div>
-                {preview.errors.length > 0 && (
-                  <ul className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 space-y-1">
-                    {preview.errors.map((e) => <li key={`${e.row}-${e.message}`}>{e.row}행: {e.message}</li>)}
-                  </ul>
-                )}
-                {preview.payload.length > 0 && (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-slate-50 text-slate-600">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-medium">지사</th>
-                          <th className="px-3 py-2 text-left font-medium">기관</th>
-                          <th className="px-3 py-2 text-center font-medium">클래스</th>
-                          <th className="px-3 py-2 text-center font-medium">시작일</th>
-                          <th className="px-3 py-2 text-center font-medium">종료일</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {preview.payload.map((row: OnlyOnePreviewRow, i) => (
-                          <tr className="border-t border-slate-100" key={i}>
-                            <td className="px-3 py-2 text-slate-500">{row.branchName}</td>
-                            <td className="px-3 py-2">
-                              {row.institutionName}
-                              {row.isNewInstitution && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">신규</span>}
-                            </td>
-                            <td className="px-3 py-2 text-center">{row.classCount}</td>
-                            <td className="px-3 py-2 text-center">{row.startDate}</td>
-                            <td className="px-3 py-2 text-center">{row.endDate ?? "-"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              </form>
+              {preview && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <span>유효 <strong className="text-emerald-700">{preview.summary.validRows}건</strong></span>
+                    {preview.summary.errorRows > 0 && <span className="text-rose-600">오류 {preview.summary.errorRows}건</span>}
                   </div>
-                )}
-                <button className="rounded-md bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={loading || preview.payload.length === 0} onClick={handleApply}>
-                  {loading ? "처리 중..." : `${preview.payload.length}건 등록`}
-                </button>
-              </div>
-            )}
-            {uploadMessage && <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">{uploadMessage}</p>}
+                  {preview.errors.length > 0 && (
+                    <ul className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 space-y-1">
+                      {preview.errors.map((e) => <li key={`${e.row}-${e.message}`}>{e.row}행: {e.message}</li>)}
+                    </ul>
+                  )}
+                  {preview.payload.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-slate-50 text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-medium">지사</th>
+                            <th className="px-3 py-2 text-left font-medium">기관</th>
+                            <th className="px-3 py-2 text-center font-medium">클래스</th>
+                            <th className="px-3 py-2 text-center font-medium">시작일</th>
+                            <th className="px-3 py-2 text-center font-medium">종료일</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {preview.payload.map((row: OnlyOnePreviewRow, i) => (
+                            <tr className="border-t border-slate-100" key={i}>
+                              <td className="px-3 py-2 text-slate-500">{row.branchName}</td>
+                              <td className="px-3 py-2">
+                                {row.institutionName}
+                                {row.isNewInstitution && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">신규</span>}
+                              </td>
+                              <td className="px-3 py-2 text-center">{row.classCount}</td>
+                              <td className="px-3 py-2 text-center">{row.startDate}</td>
+                              <td className="px-3 py-2 text-center">{row.endDate ?? "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <button className="rounded-md bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={loading || preview.payload.length === 0} onClick={handleApply}>
+                    {loading ? "처리 중..." : `${preview.payload.length}건 등록`}
+                  </button>
+                </div>
+              )}
+              {uploadMessage && <p className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">{uploadMessage}</p>}
+            </div>
           </div>
-        </section>
+        </div>
       )}
 
       {/* 기관 상세 모달 */}
