@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { prepareExcelBuffer } from "@/lib/excel-reader";
 import { auth } from "@/auth";
-import { getFiscalYearForIssue } from "@/lib/month";
+import { suggestReturnFiscalYear } from "@/lib/month";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 
 export type ErpUnresolvedRow = {
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
 
     // 음수(반품) — 매핑 완료된 경우 returns로 분리
     if (qty < 0) {
-      const suggestedFiscalYear = getFiscalYearForIssue(issueNumber, orderDate);
+      const suggestedFiscalYear = suggestReturnFiscalYear(issueNumber, orderDate);
       const returnKey = `${institutionId}|${programId}|${issueNumber}|${orderDate}`;
       const existing = returnsAgg.get(returnKey);
       if (existing) {

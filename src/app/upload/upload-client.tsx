@@ -240,7 +240,8 @@ function ReturnSection({
     <div className="space-y-2">
       <div className="flex items-center gap-3">
         <p className="text-xs text-slate-500">
-          귀속 회계연도를 확인하세요. 시스템이 issueNumber 기준으로 자동 계산한 연도가 미리 선택되어 있습니다.
+          반품일 기준으로 귀속 회계연도가 자동 지정됩니다. 대개 그대로 두면 되고,
+          2년 이상 지난 호를 반품하는 등 예외적인 경우에만 연도를 수정하세요.
         </p>
         <button
           type="button"

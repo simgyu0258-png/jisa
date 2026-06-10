@@ -99,6 +99,24 @@ export function getFiscalYearForIssue(issueNumber: number, orderDate: string): n
   return getFiscalYearFromDate(orderDate);
 }
 
+/**
+ * 반품 귀속 회계연도 추천.
+ * 반품일(returnDate) 시점에 "이미 발행된 가장 최근의 그 호"가 속한 회계연도를 반환한다.
+ * 호 N의 발행월: 1~10호 = N+2월(당해), 11~12호 = N-10월(다음해).
+ * 예) 12호를 2026-05 반품 → 발행된 최신 12호는 FY2025(2026-02월호) → FY2025.
+ *     2호를 2026-03 반품 → FY2026 2호(2026-04월호)는 아직 미발행 → 최신은 FY2025(2025-04월호) → FY2025.
+ * 연도 경계 반품까지 자동으로 맞춰지며, 2년 이상 지난 호 반품만 수동 override가 필요.
+ */
+export function suggestReturnFiscalYear(issueNumber: number, returnDate: string): number {
+  const issueMonth = issueNumber <= 10 ? issueNumber + 2 : issueNumber - 10;
+  const yearOffset = issueNumber <= 10 ? 0 : 1; // 발행 캘린더연도 = fiscalYear + yearOffset
+  const rYear = Number(returnDate.slice(0, 4));
+  const rMonth = Number(returnDate.slice(5, 7));
+  // 반품일 기준 가장 최근 발행 캘린더연도
+  const pubCalYear = rMonth >= issueMonth ? rYear : rYear - 1;
+  return pubCalYear - yearOffset;
+}
+
 /** issueNumber + 귀속 회계연도로 해당 호의 마지막 날(canonical orderDate)을 반환. */
 export function getIssueCanonicalDate(issueNumber: number, fiscalYear: number): string {
   const issueMonth = issueNumber <= 10 ? issueNumber + 2 : issueNumber - 10;
