@@ -110,6 +110,31 @@ export function getFiscalYearForIssue(issueNumber: number, orderDate: string, to
 }
 
 /**
+ * 반품 귀속 회계연도 추천 (반품 처리일 기준).
+ * 반품일(returnDate) 시점에 "이미 발행된 가장 최근의 그 호"가 속한 회계연도를 반환한다.
+ *
+ * 호의 발행월은 totalIssues - 2 threshold 기준으로 계산:
+ *   - 1~threshold호: 발행월 = issueNumber + 2 (캘린더연도 기준)
+ *   - 초과호: 발행월 = issueNumber - threshold (다음 캘린더연도 1~2월)
+ *
+ * 12호 프로그램(threshold=10) 예시:
+ *   10호(12월)를 2026-01 반품 → 최신 12월호 = 2025-12 → FY2025
+ *    4호( 6월)를 2026-01 반품 → 최신  6월호 = 2025-06 → FY2025
+ *
+ * 6호 프로그램(threshold=4) 주의: issue 5~6은 1학기(7~8월)와 2학기(1~2월)가 동일 호번호.
+ *   1학기 5호(7월)를 9월에 반품 시 FY값이 1 낮게 추천될 수 있어 수동 수정 필요.
+ */
+export function suggestReturnFiscalYear(issueNumber: number, returnDate: string, totalIssues = 12): number {
+  const threshold = totalIssues - 2;
+  const issueMonth = issueNumber <= threshold ? issueNumber + 2 : issueNumber - threshold;
+  const yearOffset = issueNumber <= threshold ? 0 : 1;
+  const rYear = Number(returnDate.slice(0, 4));
+  const rMonth = Number(returnDate.slice(5, 7));
+  const pubCalYear = rMonth >= issueMonth ? rYear : rYear - 1;
+  return pubCalYear - yearOffset;
+}
+
+/**
  * issueNumber + 귀속 회계연도로 해당 호의 마지막 날(canonical orderDate)을 반환.
  * threshold = totalIssues - 2 기준으로 발행월을 계산:
  *   - 1~threshold호: 발행월 = issueNumber + 2, 발행연도 = fiscalYear
