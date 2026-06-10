@@ -73,7 +73,7 @@ export default async function HomePage() {
       }),
       prisma.salesTarget.findMany({ where: { year: currentYear } }),
       prisma.saleOrder.findMany({
-        where: { ...getIssueAwareDateWhere(currentYear), program: { isOnlyOne: false } },
+        where: getIssueAwareDateWhere(currentYear),
         select: { quantity: true, institution: { select: { branchId: true } } },
       }),
       prisma.branch.findMany({ select: { id: true, name: true } }),

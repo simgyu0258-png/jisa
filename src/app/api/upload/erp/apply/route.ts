@@ -28,6 +28,7 @@ type ReturnApplyRow = {
   quantity: number;
   fiscalYear: number;
   originalOrderDate: string;
+  totalIssues: number;
 };
 
 export async function POST(request: Request) {
@@ -130,9 +131,9 @@ export async function POST(request: Request) {
     const institutionId = r.isNewInstitution
       ? newInstMap.get(`${r.branchId}::${r.institutionName}`)!
       : r.institutionId;
-    const orderDate = getFiscalYearForIssue(r.issueNumber, r.originalOrderDate) === r.fiscalYear
+    const orderDate = getFiscalYearForIssue(r.issueNumber, r.originalOrderDate, r.totalIssues) === r.fiscalYear
       ? r.originalOrderDate
-      : getIssueCanonicalDate(r.issueNumber, r.fiscalYear);
+      : getIssueCanonicalDate(r.issueNumber, r.fiscalYear, r.totalIssues);
     await prisma.saleOrder.upsert({
       where: {
         institutionId_programId_issueNumber_orderDate: {

@@ -62,65 +62,63 @@ export function getRecentMonths(count = 12) {
 /**
  * 호별 집계용 Prisma where 조건 반환.
  *
- * 1~10호(발행월 3~12월): 해당 캘린더연도(1~12월) 주문을 그 회계연도로 집계.
- *   → 3월호를 직전 1~2월에 선주문해도 같은 회계연도로 잡힘.
- * 11~12호(발행월 다음해 1~2월): 회계연도 전체(3월~다음해 2월) 주문을 그 회계연도로 집계.
- *   → 발행월이 다음 캘린더연도라 캘린더연도로 자르면 회계연도와 어긋나므로 회계연도 기준을 유지.
- *     1월호를 직전 12월에 선주문해도 같은 회계연도로 잡히고, 전년도 반품도 정확히 분리됨.
+ * threshold = totalIssues - 2 기준으로 두 그룹으로 분리:
+ *   - 1~threshold호(발행월 3월~): 해당 캘린더연도(1~12월) 주문을 그 회계연도로 집계.
+ *       → 3월호를 직전 1~2월에 선주문해도 같은 회계연도로 잡힘.
+ *   - (threshold+1)~totalIssues호(발행월 1~2월): 회계연도 전체(3월~다음해 2월) 기준.
+ *       → 발행월이 다음 캘린더연도라 회계연도 기준을 유지해야 정확히 집계됨.
  *
- * 두 규칙 모두 연도 간 구간이 빈틈·겹침 없이 맞물려 어떤 주문도 유실되거나 이중 집계되지 않음.
+ * 12호 프로그램: threshold=10 → 1~10호 캘린더연도, 11~12호 회계연도.
+ * 6호 프로그램: threshold=4  → 1~4호 캘린더연도, 5~6호 회계연도.
+ *   6호 2학기는 1~6호=9~2월이라 5~6호(1~2월)가 연도 경계를 넘으므로 회계연도 기준 필요.
+ *
+ * isOnlyOne: false 포함 — 온리원 이중 집계 방지.
+ * 새 totalIssues 값이 추가되면 OR 절을 추가할 것.
  */
 export function getIssueAwareDateWhere(fiscalYear: number) {
   return {
     OR: [
-      { issueNumber: { lte: 10 }, orderDate: { gte: `${fiscalYear}-01-01`, lt: `${fiscalYear + 1}-01-01` } },
-      { issueNumber: { gte: 11 }, orderDate: { gte: `${fiscalYear}-03-01`, lt: `${fiscalYear + 1}-03-01` } },
+      // 12호 프로그램
+      { program: { isOnlyOne: false, totalIssues: 12 }, issueNumber: { lte: 10 }, orderDate: { gte: `${fiscalYear}-01-01`, lt: `${fiscalYear + 1}-01-01` } },
+      { program: { isOnlyOne: false, totalIssues: 12 }, issueNumber: { gte: 11 }, orderDate: { gte: `${fiscalYear}-03-01`, lt: `${fiscalYear + 1}-03-01` } },
+      // 6호 프로그램 (1학기 3~8월, 2학기 9~2월)
+      { program: { isOnlyOne: false, totalIssues: 6 }, issueNumber: { lte: 4 }, orderDate: { gte: `${fiscalYear}-01-01`, lt: `${fiscalYear + 1}-01-01` } },
+      { program: { isOnlyOne: false, totalIssues: 6 }, issueNumber: { gte: 5 }, orderDate: { gte: `${fiscalYear}-03-01`, lt: `${fiscalYear + 1}-03-01` } },
     ],
   };
 }
 
 /**
- * 단일 호의 orderDate 범위 반환. (getIssueAwareDateWhere와 동일 규칙)
- * 1~10호: 해당 캘린더연도, 11~12호: 해당 회계연도(3월~다음해 2월).
+ * 단일 호의 orderDate 범위 반환.
+ * threshold = totalIssues - 2 기준: 이하 캘린더연도, 초과 회계연도.
  */
-export function getIssueDateRange(issueNumber: number, fiscalYear: number): { gte: string; lt: string } {
-  if (issueNumber <= 10) {
+export function getIssueDateRange(issueNumber: number, fiscalYear: number, totalIssues = 12): { gte: string; lt: string } {
+  if (issueNumber <= totalIssues - 2) {
     return { gte: `${fiscalYear}-01-01`, lt: `${fiscalYear + 1}-01-01` };
   }
   return { gte: `${fiscalYear}-03-01`, lt: `${fiscalYear + 1}-03-01` };
 }
 
 /**
- * issueNumber + orderDate로 귀속 회계연도를 계산. (getIssueAwareDateWhere와 동일 규칙)
- * 1~10호: orderDate의 캘린더연도, 11~12호: orderDate의 회계연도(3월~다음해 2월).
+ * issueNumber + orderDate로 귀속 회계연도를 계산.
+ * threshold = totalIssues - 2 기준: 이하 캘린더연도, 초과 회계연도(getFiscalYearFromDate).
+ * originalOrderDate를 사용하므로 6호 프로그램의 1학기/2학기 구분도 정확함.
  */
-export function getFiscalYearForIssue(issueNumber: number, orderDate: string): number {
-  if (issueNumber <= 10) return Number(orderDate.slice(0, 4));
+export function getFiscalYearForIssue(issueNumber: number, orderDate: string, totalIssues = 12): number {
+  if (issueNumber <= totalIssues - 2) return Number(orderDate.slice(0, 4));
   return getFiscalYearFromDate(orderDate);
 }
 
 /**
- * 반품 귀속 회계연도 추천.
- * 반품일(returnDate) 시점에 "이미 발행된 가장 최근의 그 호"가 속한 회계연도를 반환한다.
- * 호 N의 발행월: 1~10호 = N+2월(당해), 11~12호 = N-10월(다음해).
- * 예) 12호를 2026-05 반품 → 발행된 최신 12호는 FY2025(2026-02월호) → FY2025.
- *     2호를 2026-03 반품 → FY2026 2호(2026-04월호)는 아직 미발행 → 최신은 FY2025(2025-04월호) → FY2025.
- * 연도 경계 반품까지 자동으로 맞춰지며, 2년 이상 지난 호 반품만 수동 override가 필요.
+ * issueNumber + 귀속 회계연도로 해당 호의 마지막 날(canonical orderDate)을 반환.
+ * threshold = totalIssues - 2 기준으로 발행월을 계산:
+ *   - 1~threshold호: 발행월 = issueNumber + 2, 발행연도 = fiscalYear
+ *   - 초과호: 발행월 = issueNumber - threshold, 발행연도 = fiscalYear + 1
  */
-export function suggestReturnFiscalYear(issueNumber: number, returnDate: string): number {
-  const issueMonth = issueNumber <= 10 ? issueNumber + 2 : issueNumber - 10;
-  const yearOffset = issueNumber <= 10 ? 0 : 1; // 발행 캘린더연도 = fiscalYear + yearOffset
-  const rYear = Number(returnDate.slice(0, 4));
-  const rMonth = Number(returnDate.slice(5, 7));
-  // 반품일 기준 가장 최근 발행 캘린더연도
-  const pubCalYear = rMonth >= issueMonth ? rYear : rYear - 1;
-  return pubCalYear - yearOffset;
-}
-
-/** issueNumber + 귀속 회계연도로 해당 호의 마지막 날(canonical orderDate)을 반환. */
-export function getIssueCanonicalDate(issueNumber: number, fiscalYear: number): string {
-  const issueMonth = issueNumber <= 10 ? issueNumber + 2 : issueNumber - 10;
-  const issueYear = issueNumber <= 10 ? fiscalYear : fiscalYear + 1;
+export function getIssueCanonicalDate(issueNumber: number, fiscalYear: number, totalIssues = 12): string {
+  const threshold = totalIssues - 2;
+  const issueMonth = issueNumber <= threshold ? issueNumber + 2 : issueNumber - threshold;
+  const issueYear = issueNumber <= threshold ? fiscalYear : fiscalYear + 1;
   const lastDay = new Date(issueYear, issueMonth, 0).getDate();
   return `${issueYear}-${String(issueMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 }
