@@ -7,6 +7,7 @@ import { MainNav } from "@/components/nav";
 export const metadata: Metadata = {
   title: "지사 관리 시스템",
   description: "지사 정보, 권한, 판매부수를 관리하는 본사 전용 시스템",
+  icons: { icon: "/icon.png" },
 };
 
 export default async function RootLayout({
