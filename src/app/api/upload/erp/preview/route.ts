@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { prepareExcelBuffer } from "@/lib/excel-reader";
 import { auth } from "@/auth";
-import { suggestReturnFiscalYear } from "@/lib/month";
+import { getFiscalYearFromDate } from "@/lib/month";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 
 export type ErpUnresolvedRow = {
@@ -198,7 +198,9 @@ export async function POST(req: NextRequest) {
     // 음수(반품) — 매핑 완료된 경우 returns로 분리
     if (qty < 0) {
       const totalIssues = programMap.get(programId)?.totalIssues ?? 12;
-      const suggestedFiscalYear = suggestReturnFiscalYear(issueNumber, orderDate, totalIssues);
+      // 반품은 호 번호와 무관하게 "반품일이 속한 회계연도"로 귀속.
+      // (예: 2026-01 반품 → 1~2월은 직전 회계연도 → FY2025) 연도 경계 예외는 UI에서 수동 수정.
+      const suggestedFiscalYear = getFiscalYearFromDate(orderDate);
       const returnKey = `${institutionId}|${programId}|${issueNumber}|${orderDate}`;
       const existing = returnsAgg.get(returnKey);
       if (existing) {
