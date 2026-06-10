@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SaleOrderPreviewRow } from "@/app/api/sales/excel/preview/route";
 import type { ErpUnresolvedRow, ErpReturnRow, ErpPreviewResponse } from "@/app/api/upload/erp/preview/route";
+import { getCurrentFiscalYear } from "@/lib/month";
 
 type Tab = "erp" | "branch";
 
@@ -228,7 +229,12 @@ function ReturnSection({
   setFiscalYears: React.Dispatch<React.SetStateAction<Record<number, number>>>;
 }) {
   const allSuggested = rows.map((r) => r.suggestedFiscalYear);
-  const fyOptions = [...new Set(allSuggested.flatMap((fy) => [fy - 1, fy, fy + 1]))].sort();
+  // 반품은 미래에 발생하지 않으므로 상한을 현재 회계연도로 제한.
+  // 하한은 (현재 회계연도 - 2)와 가장 오래된 추천값 중 더 과거로 잡아 모든 추천값을 포함.
+  const currentFY = getCurrentFiscalYear();
+  const lo = Math.min(currentFY - 2, ...allSuggested);
+  const hi = Math.max(currentFY, ...allSuggested);
+  const fyOptions = Array.from({ length: hi - lo + 1 }, (_, k) => lo + k);
 
   function applyAllSuggested() {
     const all: Record<number, number> = {};
